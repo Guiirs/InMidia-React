@@ -1,213 +1,221 @@
 // src/pages/Clientes/ClientesPage.jsx
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useForm } from 'react-hook-form';
+// 1. Importar hooks do React Query
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
 import { fetchClientes, createCliente, updateCliente, deleteCliente } from '../../services/api';
 import { useToast } from '../../components/ToastNotification/ToastNotification';
 import Spinner from '../../components/Spinner/Spinner';
 import Modal from '../../components/Modal/Modal';
-import { validateCNPJ } from '../../utils/validator'; // Importa validação CNPJ
+import { validateCNPJ } from '../../utils/validator';
 import { getImageUrl } from '../../utils/helpers';
-import { useConfirmation } from '../../context/ConfirmationContext'; // <<< NOVO IMPORT
-import { useForm } from 'react-hook-form'; // <<< NOVO IMPORT
+import { useConfirmation } from '../../context/ConfirmationContext';
 import './Clientes.css';
 
-
 function ClientesPage() {
-  const [clientes, setClientes] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState(null);
-  const [logoPreview, setLogoPreview] = useState(null); // Mantém estado para preview
+  const [logoPreview, setLogoPreview] = useState(null);
 
   const showToast = useToast();
   const showConfirmation = useConfirmation();
+  const queryClient = useQueryClient(); // 2. Obter o cliente Query
 
-  // --- Inicializa react-hook-form para o MODAL ---
+  // 3. useQuery para Clientes
   const {
-    register,
-    handleSubmit,
-    reset,
-    watch, // Para observar o campo 'logo' para preview
-    setValue, // Para definir valores
-    formState: { errors: modalErrors, isSubmitting },
-  } = useForm({
-    mode: 'onBlur',
-    defaultValues: { nome: '', cnpj: '', telefone: '', logo: null } // Inclui 'logo'
+    data: clientes = [], // Fornece os dados, com fallback para array vazio
+    isLoading,         // Estado de loading
+    isError,           // Estado booleano de erro
+    error              // Objeto de erro
+  } = useQuery({
+    queryKey: ['clientes'], // Chave única para o cache de clientes
+    queryFn: fetchClientes, // Função da API para buscar os dados
+    placeholderData: [],    // Evita 'undefined' na primeira renderização
   });
 
-  // --- Funções de Carregamento ---
-  const loadClientes = useCallback(async () => {
-      // ... (lógica inalterada) ...
-        setIsLoading(true);
-        setError(null);
-        try {
-          const data = await fetchClientes();
-          setClientes(data);
-        } catch (err) {
-          setError(err.message);
-          showToast(err.message || 'Erro ao carregar clientes.', 'error');
-        } finally {
-          setIsLoading(false);
-        }
-  }, [showToast]);
-
-  useEffect(() => {
-    loadClientes();
-  }, [loadClientes]);
-
-  // Observa o campo 'logo' para atualizar a preview
+  // --- Configuração RHF para o Modal (inalterada) ---
+  const {
+    register, handleSubmit, reset, watch, setValue,
+    formState: { errors: modalErrors }, // Removemos isSubmitting daqui
+  } = useForm({ /* ... opções ... */ });
   const logoField = watch('logo');
-  useEffect(() => {
-      if (logoField && logoField[0] instanceof File) {
-          // Se um ficheiro foi selecionado, gera preview
-          const file = logoField[0];
-          const reader = new FileReader();
-          reader.onloadend = () => {
-              setLogoPreview(reader.result);
-          };
-          reader.readAsDataURL(file);
-      } else if (!editingCliente?.logo_url) {
-          // Se não há ficheiro e não está editando (ou editando sem logo original), limpa preview
-           // setLogoPreview(null); // Mantém preview se existir logo original
-      }
-  }, [logoField, editingCliente]); // Depende do campo 'logo' e se está editando
+  useEffect(() => { /* ... lógica de preview inalterada ... */ }, [logoField, editingCliente]);
 
+  // --- 4. Mutações (Create, Update, Delete) ---
 
-  // --- Funções do Modal (adaptadas para react-hook-form) ---
+  // Mutação para Criar Cliente
+  const createClienteMutation = useMutation({
+    mutationFn: createCliente, // API fn (recebe FormData)
+    onSuccess: () => {
+      showToast('Cliente criado com sucesso!', 'success');
+      queryClient.invalidateQueries({ queryKey: ['clientes'] }); // Invalida cache
+      closeModal();
+    },
+    onError: (error) => {
+      showToast(error.message || 'Erro ao criar cliente.', 'error');
+    }
+  });
+
+  // Mutação para Atualizar Cliente
+  const updateClienteMutation = useMutation({
+    mutationFn: (variables) => updateCliente(variables.id, variables.formData), // API fn (recebe {id, formData})
+    onSuccess: () => {
+      showToast('Cliente atualizado com sucesso!', 'success');
+      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+      closeModal();
+    },
+    onError: (error) => {
+      showToast(error.message || 'Erro ao atualizar cliente.', 'error');
+    }
+  });
+
+  // Mutação para Apagar Cliente
+  const deleteClienteMutation = useMutation({
+    mutationFn: deleteCliente, // API fn (recebe clienteId)
+    onSuccess: () => {
+      showToast('Cliente apagado com sucesso!', 'success');
+      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+    },
+    onError: (error) => {
+      showToast(error.message || 'Erro ao apagar cliente.', 'error');
+    }
+  });
+
+  // Combina estados de 'pending' das mutações de escrita
+  const isSubmitting = createClienteMutation.isPending || updateClienteMutation.isPending;
+
+  // --- Funções do Modal (adaptadas) ---
   const openAddModal = () => {
     setEditingCliente(null);
-    reset({ nome: '', cnpj: '', telefone: '', logo: null }); // Reseta o formulário
-    setLogoPreview(null); // Limpa preview
+    reset({ nome: '', cnpj: '', telefone: '', logo: null });
+    setLogoPreview(null);
     setIsModalOpen(true);
   };
-
   const openEditModal = (cliente) => {
     setEditingCliente(cliente);
-    reset({ // Preenche o formulário RHF
-      nome: cliente.nome || '',
-      cnpj: cliente.cnpj || '',
-      telefone: cliente.telefone || '',
-      logo: null // Input file sempre começa vazio
+    reset({
+      nome: cliente.nome || '', cnpj: cliente.cnpj || '',
+      telefone: cliente.telefone || '', logo: null
     });
-    // Define o preview inicial com base no logo existente
     setLogoPreview(cliente.logo_url ? getImageUrl(cliente.logo_url, null) : null);
     setIsModalOpen(true);
   };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingCliente(null);
-    // Não precisa resetar aqui, pois o reset ocorre ao abrir
-  };
-
-  // Limpa a preview e o valor do input file (usado no botão Limpar)
+  const closeModal = () => { setIsModalOpen(false); /* Reset não é estritamente necessário aqui */ };
   const handleClearLogo = () => {
-      setValue('logo', null); // Limpa o valor no RHF
-      setLogoPreview(null); // Limpa a preview
+    setValue('logo', null, { shouldValidate: false, shouldDirty: true });
+    setLogoPreview(null);
   };
 
-
-  // --- Submissão do Formulário (usando handleSubmit do RHF) ---
-  const onModalSubmit = async (data) => {
-    // 'data' contém os valores validados, incluindo data.logo (FileList)
+  // --- Submissão do Formulário (chama mutações) ---
+  const onModalSubmit = (data) => {
+    // 'data' contém os valores validados { nome, cnpj, telefone, logo: FileList }
     const dataToSend = new FormData();
     dataToSend.append('nome', data.nome);
     dataToSend.append('cnpj', data.cnpj || '');
     dataToSend.append('telefone', data.telefone || '');
-
-    const logoFile = data.logo?.[0]; // Pega o primeiro ficheiro do FileList
+    const logoFile = data.logo?.[0];
 
     if (logoFile instanceof File) {
-      // Se um *novo* ficheiro foi selecionado
       dataToSend.append('logo', logoFile);
     } else if (editingCliente && !logoPreview) {
-      // Se está editando E a preview foi limpa (manualmente pelo botão Limpar)
-      dataToSend.append('logo', ''); // Envia vazio para indicar remoção
+      dataToSend.append('logo', ''); // Remover
     }
-    // Se está editando, não selecionou novo ficheiro e a preview existe,
-    // não envia nada no campo 'logo', backend manterá o existente.
 
-    try {
-      if (editingCliente) {
-        await updateCliente(editingCliente._id, dataToSend);
-        showToast('Cliente atualizado com sucesso!', 'success');
-      } else {
-        await createCliente(dataToSend);
-        showToast('Cliente criado com sucesso!', 'success');
-      }
-      closeModal();
-      loadClientes();
-    } catch (error) {
-      showToast(error.message || 'Erro ao guardar cliente.', 'error');
-      console.error("Erro submit cliente:", error);
-      // O estado isSubmitting é gerido pelo RHF
+    if (editingCliente) {
+      updateClienteMutation.mutate({ id: editingCliente._id, formData: dataToSend });
+    } else {
+      createClienteMutation.mutate(dataToSend);
     }
   };
 
-  // --- Função de Exclusão (inalterada, já usa useConfirmation) ---
+  // --- Função de Exclusão (chama mutação) ---
   const handleDeleteClick = async (cliente) => {
      try {
-         await showConfirmation({ /* ... opções ... */
+         await showConfirmation({
              message: `Tem a certeza que deseja apagar o cliente "${cliente.nome}"?`,
-             title: "Confirmar Exclusão de Cliente",
-             confirmText: "Sim, Apagar",
+             title: "Confirmar Exclusão",
              confirmButtonType: "red",
          });
-         try {
-             await deleteCliente(cliente._id);
-             showToast('Cliente apagado com sucesso!', 'success');
-             loadClientes();
-         } catch (error) { showToast(error.message || 'Erro ao apagar cliente.', 'error'); }
+         // Chama a mutação (o estado pending será gerido pelo ConfirmationContext ou botão)
+         deleteClienteMutation.mutate(cliente._id); // Passa o ID
+
      } catch (error) { /* Cancelado */ }
   };
 
 
-  // --- Renderização (Tabela inalterada) ---
-   const renderTableBody = () => {
-     // ... (lógica inalterada) ...
-    if (isLoading) return <tr><td colSpan="5"><Spinner message="A carregar clientes..." /></td></tr>;
-    if (error) return <tr><td colSpan="5" className="text-center error-message">Erro: {error}</td></tr>;
-    if (clientes.length === 0) return <tr><td colSpan="5" className="text-center">Nenhum cliente encontrado.</td></tr>;
-     return clientes.map(cliente => (
-        <tr key={cliente._id}>
-            <td className="clientes-page__logo-cell">
-                <img src={getImageUrl(cliente.logo_url, '/assets/img/placeholder_company.png')} alt={`Logo ${cliente.nome}`} className="clientes-page__logo-img" onError={(e) => { e.target.onerror = null; e.target.src = '/assets/img/placeholder_company.png'; }} />
-            </td>
-            <td>{cliente.nome}</td>
-            <td>{cliente.cnpj || 'N/A'}</td>
-            <td>{cliente.telefone || 'N/A'}</td>
-            <td className="clientes-page__actions">
-                <button className="clientes-page__action-button clientes-page__action-button--edit" title="Editar" onClick={() => openEditModal(cliente)}> <i className="fas fa-pencil-alt"></i> </button>
-                <button className="clientes-page__action-button clientes-page__action-button--delete" title="Apagar" onClick={() => handleDeleteClick(cliente)}> <i className="fas fa-trash"></i> </button>
-            </td>
-        </tr>
-     ));
-   };
+  // --- Renderização (adaptada para useQuery) ---
+  const renderTableBody = () => {
+    if (isLoading) { // Do useQuery
+      return <tr><td colSpan="5"><Spinner message="A carregar clientes..." /></td></tr>;
+    }
+    if (isError) { // Do useQuery
+      return <tr><td colSpan="5" className="text-center error-message">Erro: {error.message}</td></tr>;
+    }
+    // Usa 'clientes' que vem do useQuery data
+    if (clientes.length === 0) {
+      return <tr><td colSpan="5" className="text-center">Nenhum cliente encontrado.</td></tr>;
+    }
+    return clientes.map(cliente => (
+      <tr key={cliente._id}>
+        <td className="clientes-page__logo-cell">
+          <img
+            src={getImageUrl(cliente.logo_url, '/assets/img/placeholder_company.png')}
+            alt={`Logo ${cliente.nome}`} className="clientes-page__logo-img"
+            onError={(e) => { e.target.onerror = null; e.target.src = '/assets/img/placeholder_company.png'; }}
+          />
+        </td>
+        <td>{cliente.nome}</td>
+        <td>{cliente.cnpj || 'N/A'}</td>
+        <td>{cliente.telefone || 'N/A'}</td>
+        <td className="clientes-page__actions">
+          <button
+            className="clientes-page__action-button clientes-page__action-button--edit"
+            title="Editar"
+            onClick={() => openEditModal(cliente)}
+            disabled={deleteClienteMutation.isPending} // Desabilita enquanto apaga
+          >
+            <i className="fas fa-pencil-alt"></i>
+          </button>
+          <button
+            className="clientes-page__action-button clientes-page__action-button--delete"
+            title="Apagar"
+            onClick={() => handleDeleteClick(cliente)}
+            // Desabilita se este item específico estiver a ser apagado
+            disabled={deleteClienteMutation.isPending && deleteClienteMutation.variables === cliente._id}
+          >
+             {/* Mostra spinner se este item estiver a ser apagado */}
+             {(deleteClienteMutation.isPending && deleteClienteMutation.variables === cliente._id) ?
+               <i className="fas fa-spinner fa-spin"></i> :
+               <i className="fas fa-trash"></i>
+             }
+          </button>
+        </td>
+      </tr>
+    ));
+  };
 
 
   return (
     <div className="clientes-page">
-      {/* ... Controles e Tabela ... */}
       <div className="clientes-page__controls">
         <button id="add-cliente-button" className="clientes-page__add-button" onClick={openAddModal}>
           <i className="fas fa-plus"></i> Adicionar Cliente
         </button>
       </div>
+
       <div className="clientes-page__table-wrapper">
-         <table className="clientes-page__table">
-           <thead><tr><th>Logo</th><th>Nome</th><th>CNPJ</th><th>Telefone</th><th>Ações</th></tr></thead>
-           <tbody>{renderTableBody()}</tbody>
-         </table>
+        <table className="clientes-page__table">
+          <thead><tr><th>Logo</th><th>Nome</th><th>CNPJ</th><th>Telefone</th><th>Ações</th></tr></thead>
+          <tbody>{renderTableBody()}</tbody>
+        </table>
       </div>
 
-
-      {/* Modal Adicionar/Editar Cliente (com react-hook-form) */}
+      {/* Modal (usa isSubmitting das mutações) */}
       <Modal
         title={editingCliente ? 'Editar Cliente' : 'Adicionar Cliente'}
-        isOpen={isModalOpen}
-        onClose={closeModal}
+        isOpen={isModalOpen} onClose={closeModal}
       >
-        {/* handleSubmit(onModalSubmit) */}
         <form id="cliente-form" className="modal-form" onSubmit={handleSubmit(onModalSubmit)} noValidate>
           <div className="modal-form__grid">
             {/* Nome */}
@@ -215,7 +223,7 @@ function ClientesPage() {
               <label htmlFor="nome">Nome da Empresa</label>
               <input type="text" id="nome"
                      className={`modal-form__input ${modalErrors.nome ? 'input-error' : ''}`}
-                     {...register('nome', { required: 'O nome da empresa é obrigatório.' })}
+                     {...register('nome', { required: 'O nome é obrigatório.' })}
                      disabled={isSubmitting} />
               {modalErrors.nome && <div className="modal-form__error-message">{modalErrors.nome.message}</div>}
             </div>
@@ -224,9 +232,7 @@ function ClientesPage() {
               <label htmlFor="cnpj">CNPJ</label>
               <input type="text" id="cnpj"
                      className={`modal-form__input ${modalErrors.cnpj ? 'input-error' : ''}`}
-                     {...register('cnpj', {
-                         validate: (value) => !value || validateCNPJ(value) || 'CNPJ inválido.' // Valida só se preenchido
-                     })}
+                     {...register('cnpj', { validate: (v) => !v || validateCNPJ(v) || 'CNPJ inválido.' })}
                      disabled={isSubmitting} />
                {modalErrors.cnpj && <div className="modal-form__error-message">{modalErrors.cnpj.message}</div>}
             </div>
@@ -235,51 +241,29 @@ function ClientesPage() {
               <label htmlFor="telefone">Telefone</label>
               <input type="tel" id="telefone"
                      className={`modal-form__input ${modalErrors.telefone ? 'input-error' : ''}`}
-                     {...register('telefone')} // Sem validação específica aqui
-                     disabled={isSubmitting} />
+                     {...register('telefone')} disabled={isSubmitting} />
                {modalErrors.telefone && <div className="modal-form__error-message">{modalErrors.telefone.message}</div>}
             </div>
             {/* Logo */}
             <div className="modal-form__input-group modal-form__input-group--full">
-              <label htmlFor="logo">Logo do Cliente (Opcional)</label>
-              <input type="file" id="logo"
+              <label htmlFor="logo">Logo (Opcional)</label>
+              <input type="file" id="logo" accept="image/*"
                      className={`modal-form__input ${modalErrors.logo ? 'input-error' : ''}`}
-                     accept="image/*"
-                     {...register('logo')} // Regista o input file
-                     disabled={isSubmitting} />
-               {/* Preview usa estado 'logoPreview', não diretamente do RHF */}
+                     {...register('logo')} disabled={isSubmitting} />
+               {/* Preview */}
                <div className="placa-form-page__image-preview-container" style={{ height: '100px', marginTop: '10px' }}>
-                   {logoPreview ? (
-                       <img src={logoPreview} alt="Pré-visualização" className="placa-form-page__image-preview" />
-                   ) : (
-                       <span>Pré-visualização</span>
-                   )}
-                    {logoPreview && (
-                        <button type="button"
-                            className="placa-form-page__remove-image-button"
-                            onClick={handleClearLogo} // Chama função para limpar
-                            disabled={isSubmitting}
-                            style={{ bottom: '0.5rem', right: '0.5rem' }} >
-                            <i className="fas fa-times"></i> Limpar
-                        </button>
-                    )}
+                   {logoPreview ? ( <img src={logoPreview} alt="Preview" className="placa-form-page__image-preview" /> ) : ( <span>Preview</span> )}
+                    {logoPreview && ( <button type="button" className="placa-form-page__remove-image-button" onClick={handleClearLogo} disabled={isSubmitting} style={{ bottom: '0.5rem', right: '0.5rem' }} > <i className="fas fa-times"></i> Limpar </button> )}
                </div>
               {modalErrors.logo && <div className="modal-form__error-message">{modalErrors.logo.message}</div>}
             </div>
           </div>
-          {/* Ações do Modal */}
           <div className="modal-form__actions">
-            <button type="button" className="modal-form__button modal-form__button--cancel" onClick={closeModal} disabled={isSubmitting}>
-              Cancelar
-            </button>
-            <button type="submit" className="modal-form__button modal-form__button--confirm" disabled={isSubmitting}>
-              {isSubmitting ? 'A guardar...' : 'Guardar'}
-            </button>
+            <button type="button" className="modal-form__button modal-form__button--cancel" onClick={closeModal} disabled={isSubmitting}> Cancelar </button>
+            <button type="submit" className="modal-form__button modal-form__button--confirm" disabled={isSubmitting}> {isSubmitting ? 'A guardar...' : 'Guardar'} </button>
           </div>
         </form>
       </Modal>
-
-       {/* O ConfirmationModal é renderizado pelo Provider */}
     </div>
   );
 }

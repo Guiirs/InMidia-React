@@ -1,115 +1,113 @@
-// src/pages/DashboardPage.jsx
-import React, { useState, useEffect, useRef } from 'react';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js'; // Importa módulos do Chart.js
-import { Bar, Pie } from 'react-chartjs-2'; // Importa componentes de gráfico
+// src/pages/Dashboard/DashboardPage.jsx
+import React, { useState, useEffect } from 'react'; // useState e useEffect podem ser removidos após confirmação
+// 1. Importar useQuery
+import { useQuery } from '@tanstack/react-query';
+
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
+import { Bar, Pie } from 'react-chartjs-2';
+// Importa as funções da API diretamente
 import { fetchDashboardSummary, fetchPlacasPorRegiaoReport } from '../../services/api';
 import { useToast } from '../../components/ToastNotification/ToastNotification';
 import Spinner from '../../components/Spinner/Spinner';
-import { generateColors } from '../../utils/charts'; // Utilitário para cores
-import './Dashboard.css'; // Importa o CSS da página
+import { generateColors } from '../../utils/charts';
+import './Dashboard.css'; // O CSS já está importado corretamente
 
-// Regista os elementos necessários do Chart.js
-ChartJS.register(
-  ArcElement,
-  Tooltip,
-  Legend,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title
-);
+// Regista elementos Chart.js (inalterado)
+ChartJS.register( ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title );
 
 function DashboardPage() {
-  const [summaryData, setSummaryData] = useState({ totalPlacas: '...', placasDisponiveis: '...', regiaoPrincipal: '...' });
-  const [chartData, setChartData] = useState(null);
-  const [isLoadingSummary, setIsLoadingSummary] = useState(true);
-  const [isLoadingChart, setIsLoadingChart] = useState(true);
-  const [errorSummary, setErrorSummary] = useState(null);
-  const [errorChart, setErrorChart] = useState(null);
   const showToast = useToast();
 
-  // Busca dados do resumo
-  useEffect(() => {
-    setIsLoadingSummary(true);
-    setErrorSummary(null);
-    fetchDashboardSummary()
-      .then(data => setSummaryData(data))
-      .catch(err => {
-        setErrorSummary(err.message);
-        showToast(err.message || 'Erro ao carregar resumo.', 'error');
-      })
-      .finally(() => setIsLoadingSummary(false));
-  }, [showToast]); // Adiciona showToast às dependências se usado dentro do effect
+  // --- 2. useQuery para Dados do Resumo ---
+  const {
+    data: summaryData,
+    isLoading: isLoadingSummary,
+    isError: isErrorSummary,
+    error: errorSummary,
+  } = useQuery({
+    queryKey: ['dashboardSummary'], // Chave para o cache do resumo
+    queryFn: fetchDashboardSummary, // Função da API
+    staleTime: 1000 * 60 * 2, // Exemplo: Cache de 2 minutos para o resumo
+    placeholderData: { totalPlacas: '...', placasDisponiveis: '...', regiaoPrincipal: '...' } // Dados placeholder
+  });
 
-  // Busca dados para os gráficos
-  useEffect(() => {
-    setIsLoadingChart(true);
-    setErrorChart(null);
-    fetchPlacasPorRegiaoReport()
-      .then(reportData => {
-        if (!reportData || reportData.length === 0) {
-          setChartData(null); // Sem dados
-          showToast('Nenhum dado encontrado para gerar gráficos.', 'info');
-          return;
-        }
-        const labels = reportData.map(item => item.regiao || 'Sem Região');
-        const dataValues = reportData.map(item => item.total_placas);
-        const backgroundColors = generateColors(labels.length);
+  // --- 3. useQuery para Dados dos Gráficos ---
+  const {
+    data: reportData, // Dados brutos do relatório
+    isLoading: isLoadingChart,
+    isError: isErrorChart,
+    error: errorChart,
+  } = useQuery({
+    queryKey: ['placasPorRegiaoReport'], // Chave para o cache do relatório
+    queryFn: fetchPlacasPorRegiaoReport, // Função da API
+    staleTime: 1000 * 60 * 10, // Exemplo: Cache de 10 minutos para o relatório
+    placeholderData: [] // Array vazio como placeholder
+  });
 
-        setChartData({
-          labels,
-          datasets: [{
-            label: 'Total de Placas', // Usado no Bar chart
-            data: dataValues,
-            backgroundColor: backgroundColors,
-            borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
-            borderWidth: 1,
-            hoverOffset: 4 // Para Pie chart
-          }]
-        });
-      })
-      .catch(err => {
-        setErrorChart(err.message);
-        showToast(err.message || 'Erro ao carregar dados dos gráficos.', 'error');
-      })
-      .finally(() => setIsLoadingChart(false));
-  }, [showToast]); // Adiciona showToast às dependências
+  // --- 4. Processamento dos Dados do Gráfico (quando disponíveis) ---
+  // Usamos useState para guardar os dados formatados para o Chart.js
+  const [chartData, setChartData] = useState(null);
+
+  useEffect(() => {
+    // Processa os dados do relatório APENAS quando eles mudam e não estão em loading
+    if (reportData && !isLoadingChart) {
+      if (!reportData || reportData.length === 0) {
+        setChartData(null);
+        // Opcional: mostrar toast se os dados vierem vazios (o useQuery não faz isso)
+        // showToast('Nenhum dado encontrado para gerar gráficos.', 'info');
+        return;
+      }
+      const labels = reportData.map(item => item.regiao || 'Sem Região');
+      const dataValues = reportData.map(item => item.total_placas);
+      const backgroundColors = generateColors(labels.length);
+
+      setChartData({
+        labels,
+        datasets: [{
+          label: 'Total de Placas',
+          data: dataValues,
+          backgroundColor: backgroundColors,
+          borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
+          borderWidth: 1,
+          hoverOffset: 4
+        }]
+      });
+    } else if (!reportData && !isLoadingChart) {
+        // Caso em que reportData é null/undefined após o loading (pode acontecer se a API retornar erro não capturado pelo react-query)
+        setChartData(null);
+    }
+  }, [reportData, isLoadingChart]); // Depende dos dados do useQuery
+
 
   // --- Renderização dos Cards de Resumo ---
   const renderSummaryCards = () => {
-    if (isLoadingSummary) {
-      return (
-        <>
-          <div className="summary-card"><Spinner message="" /></div>
-          <div className="summary-card"><Spinner message="" /></div>
-          <div className="summary-card"><Spinner message="" /></div>
-        </>
-      );
+    // Mostra placeholder enquanto carrega
+    const dataToShow = isLoadingSummary ? { totalPlacas: '...', placasDisponiveis: '...', regiaoPrincipal: '...' } : summaryData;
+
+    if (isErrorSummary) {
+      return <div className="dashboard-page__error" style={{ gridColumn: '1 / -1' }}>Erro resumo: {errorSummary.message}</div>;
     }
-    if (errorSummary) {
-      return <div className="dashboard-page__error" style={{ gridColumn: '1 / -1' }}>Erro ao carregar resumo: {errorSummary}</div>;
-    }
+
     return (
       <>
         <div className="summary-card">
           <div className="summary-card__icon summary-card__icon--total"><i className="fas fa-th-large"></i></div>
           <div className="summary-card__info">
-            <p className="summary-card__value">{summaryData.totalPlacas ?? '0'}</p>
+            <p className="summary-card__value">{dataToShow?.totalPlacas ?? '0'}</p>
             <span className="summary-card__label">Total de Placas</span>
           </div>
         </div>
         <div className="summary-card">
           <div className="summary-card__icon summary-card__icon--disponivel"><i className="fas fa-check-circle"></i></div>
           <div className="summary-card__info">
-            <p className="summary-card__value">{summaryData.placasDisponiveis ?? '0'}</p>
+            <p className="summary-card__value">{dataToShow?.placasDisponiveis ?? '0'}</p>
             <span className="summary-card__label">Placas Disponíveis</span>
           </div>
         </div>
         <div className="summary-card">
           <div className="summary-card__icon summary-card__icon--regiao"><i className="fas fa-map-pin"></i></div>
           <div className="summary-card__info">
-            {/* Garante que N/A não seja tratado como 0 */}
-            <p className="summary-card__value">{summaryData.regiaoPrincipal === null || summaryData.regiaoPrincipal === undefined ? 'N/A' : summaryData.regiaoPrincipal}</p>
+            <p className="summary-card__value">{dataToShow?.regiaoPrincipal ?? 'N/A'}</p>
             <span className="summary-card__label">Região Principal</span>
           </div>
         </div>
@@ -117,26 +115,18 @@ function DashboardPage() {
     );
   };
 
-  // --- Opções Comuns para Gráficos ---
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false, // Permite controlar altura
-  };
+  // --- Opções Comuns para Gráficos (inalteradas) ---
+  const chartOptions = { responsive: true, maintainAspectRatio: false, };
+  const barChartOptions = { /* ... */ };
+  const pieChartOptions = { /* ... */ };
+  barChartOptions.scales = { y: { beginAtZero: true, ticks: { precision: 0 } } };
+  barChartOptions.plugins = { legend: { display: false } };
+  pieChartOptions.plugins = { legend: { position: 'top' } };
 
-  const barChartOptions = {
-    ...chartOptions,
-    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
-    plugins: { legend: { display: false } }
-  };
-
-  const pieChartOptions = {
-    ...chartOptions,
-    plugins: { legend: { position: 'top' } }
-  };
 
   // --- Renderização dos Gráficos ---
   const renderCharts = () => {
-    if (isLoadingChart) {
+    if (isLoadingChart && !chartData) { // Mostra spinner só no loading inicial
       return (
         <>
           <div className="dashboard-page__chart-container"><Spinner message="A carregar gráfico..." /></div>
@@ -144,15 +134,15 @@ function DashboardPage() {
         </>
       );
     }
-    if (errorChart) {
+    if (isErrorChart) {
       return (
         <>
-          <div className="dashboard-page__chart-container"><p className="error-message">Erro ao carregar gráfico: {errorChart}</p></div>
-          <div className="dashboard-page__chart-container"><p className="error-message">Erro ao carregar gráfico: {errorChart}</p></div>
+          <div className="dashboard-page__chart-container"><p className="error-message">Erro gráfico: {errorChart.message}</p></div>
+          <div className="dashboard-page__chart-container"><p className="error-message">Erro gráfico: {errorChart.message}</p></div>
         </>
       );
     }
-    if (!chartData) {
+    if (!chartData) { // Se chartData for null (sem dados ou erro no processamento)
       return (
         <>
           <div className="dashboard-page__chart-container"><p>Sem dados para exibir.</p></div>
@@ -160,17 +150,18 @@ function DashboardPage() {
         </>
       );
     }
+    // Renderiza os gráficos se houver chartData
     return (
       <>
         <div className="dashboard-page__chart-container">
           <h3 className="dashboard-page__chart-title">Placas por Região</h3>
-          <div style={{ position: 'relative', height: '350px' }}> {/* Wrapper para altura */}
+          <div style={{ position: 'relative', height: '350px' }}>
             <Bar options={barChartOptions} data={chartData} />
           </div>
         </div>
         <div className="dashboard-page__chart-container">
           <h3 className="dashboard-page__chart-title">Distribuição</h3>
-          <div style={{ position: 'relative', height: '350px' }}> {/* Wrapper para altura */}
+          <div style={{ position: 'relative', height: '350px' }}>
             <Pie options={pieChartOptions} data={chartData} />
           </div>
         </div>
