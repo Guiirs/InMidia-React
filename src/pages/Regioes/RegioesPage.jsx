@@ -1,37 +1,32 @@
-// src/pages/RegioesPage.jsx
 import React, { useState, useEffect } from 'react';
-import { getRegioes, clearRegioesCache } from '../../state/dataCache'; // Funções do estado/cache
-import { createRegiao, updateRegiao, deleteRegiao } from '../../services/api'; // Funções API
+import { getRegioes, clearRegioesCache } from '../../state/dataCache'; 
+import { createRegiao, updateRegiao, deleteRegiao } from '../../services/api'; 
 import Spinner from '../../components/Spinner/Spinner';
-import Modal from '../../components/Modal/Modal'; // O novo componente Modal
-import { useToast } from '../../components/ToastNotification/ToastNotification';
-import { validateForm } from '../../utils/validator'; // Validação
-// Importar ConfirmationModal React (se tiver um) ou usar window.confirm
-// import ConfirmationModal from '../components/ConfirmationModal';
-import './Regioes.css'; // CSS da página
+import Modal from '../../components/Modal/Modal'; 
+import { useToast } from '../../components/ToastNotification/ToastNotification'; 
+import { useConfirmation } from '../../context/ConfirmationContext'; 
+import './Regioes.css'; 
 
 function RegioesPage() {
   const [regioes, setRegioes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingRegiao, setEditingRegiao] = useState(null); // Guarda a região a editar (ou null para adicionar)
-  const [regiaoNomeInput, setRegiaoNomeInput] = useState(''); // Estado para o input do modal
-  const [modalErrors, setModalErrors] = useState({}); // Erros de validação do modal
-  const [isSubmitting, setIsSubmitting] = useState(false); // Estado de submissão do modal
-
-  // Confirmação de exclusão (exemplo simples com estado, idealmente seria um componente modal separado)
-  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
-  const [regiaoToDelete, setRegiaoToDelete] = useState(null);
-
+  const [editingRegiao, setEditingRegiao] = useState(null); 
+  const [regiaoNomeInput, setRegiaoNomeInput] = useState(''); 
+  const [modalErrors, setModalErrors] = useState({}); 
+  const [isSubmitting, setIsSubmitting] = useState(false); 
+  
   const showToast = useToast();
+  const showConfirmation = useConfirmation(); // Inicializa o hook de confirmação
 
   // Função para carregar regiões (usa o cache/API do state.js)
   const loadRegioes = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await getRegioes(); // Usa a função do state.js
+      // Assumindo que getRegioes é síncrono ou assíncrono e deve ser aguardado
+      const data = await getRegioes(); 
       setRegioes(data);
     } catch (err) {
       setError(err.message);
@@ -44,9 +39,9 @@ function RegioesPage() {
   // Carrega regiões ao montar o componente
   useEffect(() => {
     loadRegioes();
-  }, []); // Executa apenas uma vez
+  }, []); 
 
-  // Abre o modal para Adicionar
+  // --- Handlers do Modal ---
   const handleAddClick = () => {
     setEditingRegiao(null);
     setRegiaoNomeInput('');
@@ -54,138 +49,114 @@ function RegioesPage() {
     setIsModalOpen(true);
   };
 
-  // Abre o modal para Editar
   const handleEditClick = (regiao) => {
     setEditingRegiao(regiao);
-    setRegiaoNomeInput(regiao.nome); // Preenche o input
+    setRegiaoNomeInput(regiao.nome);
     setModalErrors({});
     setIsModalOpen(true);
   };
 
-  // Fecha o modal
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setEditingRegiao(null); // Limpa estado de edição
+    setEditingRegiao(null);
     setRegiaoNomeInput('');
     setModalErrors({});
-    setIsSubmitting(false); // Garante que o estado de submissão é resetado
+    setIsSubmitting(false);
   };
-
+   
   // Validação e submissão do formulário do modal
   const handleModalSubmit = async (event) => {
-    event.preventDefault();
-    setModalErrors({}); // Limpa erros
-    setIsSubmitting(true);
+        event.preventDefault();
+        setModalErrors({}); 
+        setIsSubmitting(true);
 
-    const validationRules = {
-        nome: [{ type: 'required', message: 'O nome da região é obrigatório.' }, { type: 'maxLength', param: 100 }]
-    };
+        const validationRules = {
+            nome: [{ type: 'required', message: 'O nome da região é obrigatório.' }, { type: 'maxLength', param: 100 }]
+        };
 
-    // Valida apenas o campo 'nome' com o valor do estado 'regiaoNomeInput'
-    let isValid = true;
-    const newErrors = {};
-    const value = regiaoNomeInput;
-    for (const rule of validationRules.nome) {
-        let isValidForRule = true;
-        let errorMessage = rule.message || 'Valor inválido.';
+        // Lógica de validação manual
+        let isValid = true;
+        const newErrors = {};
+        
+        // Validação de Requisitado
+        if (!regiaoNomeInput || String(regiaoNomeInput).trim() === '') {
+            newErrors.nome = 'O nome da região é obrigatório.';
+            isValid = false;
+        } 
+        
+        // Validação de Tamanho Máximo
+        if (isValid && regiaoNomeInput.length > 100) {
+            newErrors.nome = 'O nome não pode exceder 100 caracteres.';
+            isValid = false;
+        }
 
-         switch (rule.type) {
-             case 'required':
-                 isValidForRule = value && String(value).trim() !== '';
-                 break;
-             case 'maxLength':
-                 isValidForRule = String(value).length <= rule.param;
-                 break;
-         }
-         if (!isValidForRule) {
-             newErrors.nome = errorMessage;
-             isValid = false;
-             break; // Para no primeiro erro para este campo
-         }
-    }
-    setModalErrors(newErrors);
+        setModalErrors(newErrors);
 
+        if (!isValid) {
+          showToast('Formulário inválido.', 'error');
+          setIsSubmitting(false);
+          return;
+        }
 
-    if (!isValid) {
-      showToast('Formulário inválido.', 'error');
-      setIsSubmitting(false);
-      return;
-    }
-
-    // Se for edição e o nome não mudou, apenas fecha
-    if (editingRegiao && regiaoNomeInput === editingRegiao.nome) {
-        handleCloseModal();
-        return;
-    }
-
-    try {
-      if (editingRegiao) {
-        await updateRegiao(editingRegiao._id, { nome: regiaoNomeInput }); // Usa _id
-        showToast('Região atualizada com sucesso!', 'success');
-      } else {
-        await createRegiao({ nome: regiaoNomeInput });
-        showToast('Região criada com sucesso!', 'success');
-      }
-      clearRegioesCache(); // Limpa o cache
-      handleCloseModal(); // Fecha o modal
-      loadRegioes(); // Recarrega a lista
-    } catch (error) {
-      showToast(error.message || 'Erro ao guardar região.', 'error');
-       // Mantém o modal aberto e reabilita o botão
-       setIsSubmitting(false);
-    }
-     // finally não é necessário aqui, pois o estado isSubmitting controla o botão
-  };
-
-  // Abre a confirmação para apagar
-  const handleDeleteClick = (regiao) => {
-     setRegiaoToDelete(regiao);
-     setShowConfirmDelete(true); // Abre confirmação (usando window.confirm por agora)
-
-     // Usando window.confirm como placeholder:
-     if (window.confirm(`Tem a certeza de que deseja apagar a região "${regiao.nome}"?`)) {
-         confirmDelete(); // Chama a função de apagar diretamente
-     } else {
-         // Cancela a exclusão se usar window.confirm
-         setRegiaoToDelete(null);
-         setShowConfirmDelete(false);
-     }
-
-     // Lógica com Modal de Confirmação React (quando tiver um):
-     // setShowConfirmDelete(true);
-  };
-
-    // Função chamada ao confirmar a exclusão (seja por window.confirm ou modal)
-    const confirmDelete = async () => {
-        if (!regiaoToDelete) return;
-        const idToDelete = regiaoToDelete._id; // Usa _id
-
-        // Opcional: Mostrar feedback visual na linha ou botão
-        // Idealmente, desabilitaria o botão de apagar da linha específica
+        // Caso Edição sem alteração
+        if (editingRegiao && regiaoNomeInput === editingRegiao.nome) {
+            handleCloseModal();
+            return;
+        }
 
         try {
-            await deleteRegiao(idToDelete);
-            clearRegioesCache(); // Limpa cache
+          if (editingRegiao) {
+            await updateRegiao(editingRegiao._id, { nome: regiaoNomeInput }); 
+            showToast('Região atualizada com sucesso!', 'success');
+          } else {
+            await createRegiao({ nome: regiaoNomeInput });
+            showToast('Região criada com sucesso!', 'success');
+          }
+          
+          clearRegioesCache(); // Limpa o cache para forçar a recarga
+          handleCloseModal(); 
+          loadRegioes(); 
+        } catch (error) {
+          showToast(error.message || 'Erro ao guardar região.', 'error');
+        } finally {
+           setIsSubmitting(false);
+        }
+   };
+  
+  // Função refatorada para usar o useConfirmation
+  const handleDeleteClick = async (regiao) => {
+    try {
+        // 1. Abre o modal de confirmação e aguarda o resultado
+        await showConfirmation({
+            message: `Tem a certeza de que deseja apagar a região "${regiao.nome}"? Esta ação não pode ser desfeita.`,
+            title: "Confirmar Exclusão de Região",
+            confirmText: "Sim, Apagar",
+            confirmButtonType: "red", // Usa o botão vermelho
+        });
+
+        // 2. Se o usuário confirmou (a Promise foi resolvida), executa a exclusão
+        try {
+            await deleteRegiao(regiao._id);
+            clearRegioesCache(); 
             showToast('Região apagada com sucesso!', 'success');
-            loadRegioes(); // Recarrega
+            loadRegioes(); 
         } catch (error) {
             showToast(error.message || 'Erro ao apagar região.', 'error');
-            // Reabilitaria o botão de apagar se desabilitado
-        } finally {
-            // Fecha o modal de confirmação e limpa o estado (se usar modal React)
-             setShowConfirmDelete(false);
-             setRegiaoToDelete(null);
         }
-    };
 
-    // Função para cancelar a exclusão (se usar modal React)
-    const cancelDelete = () => {
-         setShowConfirmDelete(false);
-         setRegiaoToDelete(null);
-    };
-
+    } catch (error) {
+        // 3. Se o usuário cancelou ou fechou o modal (a Promise foi rejeitada)
+        if (error.message === "Ação cancelada pelo usuário.") {
+           // Opcional: Apenas loga que foi cancelado sem mostrar Toast
+           console.log("Exclusão de região cancelada.");
+        } else {
+           // Trata outros erros de rejeição da promessa, se houver
+        }
+    }
+  };
 
   // --- Renderização ---
+
   const renderTableBody = () => {
     if (isLoading) {
       return <tr><td colSpan="3"><Spinner message="A carregar regiões..." /></td></tr>;
@@ -197,7 +168,6 @@ function RegioesPage() {
       return <tr><td colSpan="3" className="text-center">Nenhuma região encontrada.</td></tr>;
     }
     return regioes.map(regiao => (
-      // Usa _id como key e para as ações
       <tr key={regiao._id}>
         <td>{regiao._id}</td>
         <td>{regiao.nome}</td>
@@ -205,14 +175,14 @@ function RegioesPage() {
           <button
             className="regioes-page__action-button regioes-page__action-button--edit"
             title="Editar"
-            onClick={() => handleEditClick(regiao)} // Passa o objeto regiao
+            onClick={() => handleEditClick(regiao)} 
           >
             <i className="fas fa-pencil-alt"></i>
           </button>
           <button
             className="regioes-page__action-button regioes-page__action-button--delete"
             title="Apagar"
-            onClick={() => handleDeleteClick(regiao)} // Passa o objeto regiao
+            onClick={() => handleDeleteClick(regiao)} 
           >
             <i className="fas fa-trash"></i>
           </button>
@@ -220,14 +190,18 @@ function RegioesPage() {
       </tr>
     ));
   };
-
+  
   return (
     <div className="regioes-page">
-      <div className="regioes-page__controls">
-        <button id="add-regiao-button" className="regioes-page__add-button" onClick={handleAddClick}>
-          <i className="fas fa-plus"></i> Adicionar Região
-        </button>
+      <div className="regioes-page__header">
+        <h1 className="regioes-page__title">Gerenciar Regiões</h1>
+        <div className="regioes-page__controls">
+          <button id="add-regiao-button" className="regioes-page__add-button" onClick={handleAddClick}>
+            <i className="fas fa-plus"></i> Adicionar Região
+          </button>
+        </div>
       </div>
+      
       <div className="regioes-page__table-wrapper">
         <table className="regioes-page__table">
           <thead>
@@ -243,16 +217,15 @@ function RegioesPage() {
         </table>
       </div>
 
-      {/* Modal para Adicionar/Editar */}
+      {/* Modal Adicionar/Editar */}
       <Modal
         title={editingRegiao ? 'Editar Região' : 'Adicionar Região'}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
       >
-        {/* O formulário é renderizado como children do Modal */}
         <form id="regiao-form" className="modal-form" onSubmit={handleModalSubmit} noValidate>
-          <div className="modal-form__grid"> {/* Garante grid se necessário */}
-            <div className="modal-form__input-group modal-form__input-group--full"> {/* Garante largura total */}
+          <div className="modal-form__grid"> 
+            <div className="modal-form__input-group modal-form__input-group--full"> 
               <label htmlFor="nome">Nome da Região</label>
               <input
                 type="text"
@@ -262,9 +235,8 @@ function RegioesPage() {
                 value={regiaoNomeInput}
                 onChange={(e) => setRegiaoNomeInput(e.target.value)}
                 required
-                disabled={isSubmitting} // Desabilita durante a submissão
+                disabled={isSubmitting} 
               />
-              {/* Exibe erro de validação */}
               {modalErrors.nome && <div className="modal-form__error-message">{modalErrors.nome}</div>}
             </div>
           </div>
@@ -273,30 +245,20 @@ function RegioesPage() {
                 type="button"
                 className="modal-form__button modal-form__button--cancel"
                 onClick={handleCloseModal}
-                disabled={isSubmitting} // Desabilita durante a submissão
+                disabled={isSubmitting} 
              >
                 Cancelar
              </button>
             <button
                 type="submit"
                 className="modal-form__button modal-form__button--confirm"
-                disabled={isSubmitting} // Desabilita durante a submissão
+                disabled={isSubmitting} 
             >
               {isSubmitting ? 'A guardar...' : 'Guardar'}
             </button>
           </div>
         </form>
       </Modal>
-
-      {/* Modal de Confirmação (Placeholder com window.confirm, ou usar um componente React) */}
-       {/* {showConfirmDelete && regiaoToDelete && (
-           <ConfirmationModal
-               message={`Tem a certeza que deseja apagar a região "${regiaoToDelete.nome}"?`}
-               onConfirm={confirmDelete}
-               onCancel={cancelDelete}
-           />
-       )} */}
-
     </div>
   );
 }

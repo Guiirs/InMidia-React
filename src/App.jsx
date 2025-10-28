@@ -5,7 +5,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 // Layout e Proteção
 // Assumindo que MainLayout e ProtectedRoute estão em suas próprias pastas
 import MainLayout from './layouts/MainLayout/MainLayout';
-import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute';
+import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute'; // Se a pasta for ProtectedRoute
+
+// Páginas Reais (com caminhos atualizados para subpastas)
 import AdminRoute from './components/AdminRoute/AdminRoute';
 
 // Páginas Reais (com caminhos atualizados para subpastas)
@@ -24,7 +26,6 @@ import PlacaFormPage from './pages/PlacaFormPage/PlacaFormPage';
 import PlacaDetailsPage from './pages/PlacaDetailsPage/PlacaDetailsPage';
 import RegisterPage from './pages/Register/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPassword/ForgotPasswordPage';
-import AdminUsersPage from './pages/Admin/AdminUsersPage'; // Importe a página real
 
 // Componente de Notificação
 import ToastNotification from './components/ToastNotification/ToastNotification'; 

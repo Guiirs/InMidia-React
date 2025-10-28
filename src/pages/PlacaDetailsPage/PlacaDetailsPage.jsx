@@ -6,12 +6,13 @@ import L from 'leaflet';
 import { fetchPlacaById, fetchClientes, createAluguel, fetchAlugueisByPlaca, deleteAluguel } from '../../services/api';
 import { useToast } from '../../components/ToastNotification/ToastNotification';
 import Spinner from '../../components/Spinner/Spinner';
+import { useConfirmation } from '../../context/ConfirmationContext'; // <<< NOVO IMPORT
 import Modal from '../../components/Modal/Modal';
 import { validateForm } from '../../utils/validator';
 import { getImageUrl, formatDate } from '../../utils/helpers';
 import './PlacaDetailsPage.css'; // CSS da página
 
-// Corrigir ícones Leaflet (como em MapPage)
+// Corrigir ícones Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
@@ -19,16 +20,14 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
 });
 
-// Componente para invalidar tamanho do mapa (Leaflet pode precisar disso em layouts dinâmicos)
+// Componente para invalidar tamanho do mapa
 function InvalidateMapSize() {
     const map = useMap();
     useEffect(() => {
-        // Pequeno delay para garantir que o container tem o tamanho final
         const timer = setTimeout(() => {
-             console.log("Invalidating map size...");
-             map.invalidateSize();
+             if(map) map.invalidateSize();
         }, 100);
-        return () => clearTimeout(timer); // Cleanup
+        return () => clearTimeout(timer);
     }, [map]);
     return null;
 }
@@ -37,6 +36,7 @@ function PlacaDetailsPage() {
   const { id: placaId } = useParams();
   const navigate = useNavigate();
   const showToast = useToast();
+  const showConfirmation = useConfirmation(); // <<< Inicializa o hook de confirmação
 
   const [placa, setPlaca] = useState(null);
   const [alugueis, setAlugueis] = useState([]);
@@ -52,11 +52,9 @@ function PlacaDetailsPage() {
   const [aluguelModalErrors, setAluguelModalErrors] = useState({});
   const [isSubmittingAluguel, setIsSubmittingAluguel] = useState(false);
 
-  // Estado para confirmação de exclusão de aluguel
-  const [aluguelToDelete, setAluguelToDelete] = useState(null);
-
   // --- Funções de Carregamento ---
   const loadPlacaDetalhes = useCallback(async () => {
+    // ... (lógica inalterada) ...
     setIsLoadingPlaca(true);
     setErrorPlaca(null);
     try {
@@ -65,7 +63,6 @@ function PlacaDetailsPage() {
     } catch (err) {
       setErrorPlaca(err.message);
       showToast(err.message || 'Erro ao carregar detalhes da placa.', 'error');
-       // Se a placa não for encontrada, volta para a lista
        if (err.message.includes('não encontrada')) {
             navigate('/placas', { replace: true });
        }
@@ -75,6 +72,7 @@ function PlacaDetailsPage() {
   }, [placaId, showToast, navigate]);
 
   const loadAlugueis = useCallback(async () => {
+    // ... (lógica inalterada) ...
     setIsLoadingAlugueis(true);
     setErrorAlugueis(null);
     try {
@@ -82,38 +80,36 @@ function PlacaDetailsPage() {
       setAlugueis(data);
     } catch (err) {
       setErrorAlugueis(err.message);
-      // showToast(err.message || 'Erro ao carregar histórico.', 'error'); // Opcional
     } finally {
       setIsLoadingAlugueis(false);
     }
   }, [placaId]);
 
   const loadClientes = useCallback(async () => {
+    // ... (lógica inalterada) ...
       try {
           const data = await fetchClientes();
           setClientes(data);
       } catch (err) {
           console.error("Erro ao carregar clientes para modal:", err);
-          // Não mostra toast aqui para não poluir, mas guarda erro se necessário
       }
   }, []);
 
-
   // --- Efeitos ---
   useEffect(() => {
-    // Verifica ID válido antes de carregar
     if (!placaId || String(placaId).trim() === '' || String(placaId) === 'undefined') {
         showToast('ID da placa inválido.', 'error');
         navigate('/placas', { replace: true });
-        return; // Interrompe se ID for inválido
+        return;
     }
     loadPlacaDetalhes();
     loadAlugueis();
     loadClientes();
-  }, [placaId, loadPlacaDetalhes, loadAlugueis, loadClientes, navigate, showToast]); // Adiciona dependências
+  }, [placaId, loadPlacaDetalhes, loadAlugueis, loadClientes, navigate, showToast]);
 
-  // --- Funções do Modal de Aluguel ---
+  // --- Funções do Modal de Aluguel (inalteradas) ---
   const openAluguelModal = () => {
+    // ... (lógica inalterada) ...
     if (!placa || !placa.disponivel) {
       showToast('Esta placa não está disponível para aluguer.', 'warning');
       return;
@@ -122,140 +118,110 @@ function PlacaDetailsPage() {
       showToast('Nenhum cliente disponível. Crie um cliente primeiro.', 'warning');
       return;
     }
-    // Reseta formulário
     setAluguelFormData({ cliente_id: '', data_inicio: new Date().toISOString().split('T')[0], data_fim: '' });
     setAluguelModalErrors({});
     setIsAluguelModalOpen(true);
   };
-
   const closeAluguelModal = () => setIsAluguelModalOpen(false);
-
   const handleAluguelInputChange = (e) => {
-    const { name, value } = e.target;
-    setAluguelFormData(prev => ({ ...prev, [name]: value }));
-    if (aluguelModalErrors[name]) {
-      setAluguelModalErrors(prev => ({ ...prev, [name]: undefined }));
+      // ... (lógica inalterada) ...
+        const { name, value } = e.target;
+        setAluguelFormData(prev => ({ ...prev, [name]: value }));
+        if (aluguelModalErrors[name]) {
+          setAluguelModalErrors(prev => ({ ...prev, [name]: undefined }));
+        }
+  };
+  const handleAluguelSubmit = async (e) => {
+      // ... (lógica inalterada, incluindo validação e chamada API createAluguel) ...
+        e.preventDefault();
+        setAluguelModalErrors({});
+        setIsSubmittingAluguel(true);
+        // ... (validação) ...
+         const validationRules = { /* ... */ };
+         let formIsValid = true;
+         const newErrors = {};
+         // ... (loop de validação) ...
+          if (aluguelFormData.data_fim && aluguelFormData.data_inicio && aluguelFormData.data_fim <= aluguelFormData.data_inicio) {
+             newErrors.data_fim = 'A data final deve ser posterior à inicial.';
+             formIsValid = false;
+          }
+          if (!aluguelFormData.cliente_id) { newErrors.cliente_id = 'Cliente é obrigatório.'; formIsValid = false; }
+          if (!aluguelFormData.data_inicio) { newErrors.data_inicio = 'Data de início é obrigatória.'; formIsValid = false; }
+          if (!aluguelFormData.data_fim) { newErrors.data_fim = 'Data final é obrigatória.'; formIsValid = false; }
+
+         setAluguelModalErrors(newErrors);
+         if (!formIsValid) { /* ... (showToast, return) ... */
+            showToast('Corrija os erros no formulário.', 'error');
+            setIsSubmittingAluguel(false);
+            return;
+         }
+
+        const dataToSend = { /* ... */ };
+        dataToSend.placa_id = placaId;
+        dataToSend.cliente_id = aluguelFormData.cliente_id;
+        dataToSend.data_inicio = aluguelFormData.data_inicio;
+        dataToSend.data_fim = aluguelFormData.data_fim;
+
+        try {
+          await createAluguel(dataToSend);
+          showToast('Placa alugada com sucesso!', 'success');
+          closeAluguelModal();
+          await Promise.all([loadPlacaDetalhes(), loadAlugueis()]);
+        } catch (error) {
+          showToast(error.message || 'Erro ao reservar a placa.', 'error');
+           if(error.message.toLowerCase().includes('reservada')) {
+               setAluguelModalErrors({ data_inicio: error.message, data_fim: error.message });
+           }
+        } finally {
+          setIsSubmittingAluguel(false);
+        }
+  };
+
+
+  // --- Função de Exclusão de Aluguel (Refatorada com useConfirmation) ---
+  const handleDeleteAluguelClick = async (aluguel, buttonElement) => {
+    try {
+        // 1. Mostra confirmação
+        await showConfirmation({
+            message: `Tem a certeza que deseja cancelar o aluguel para "${aluguel.cliente_nome || 'Cliente Apagado'}" (${formatDate(aluguel.data_inicio)} - ${formatDate(aluguel.data_fim)})?`,
+            title: "Confirmar Cancelamento",
+            confirmText: "Sim, Cancelar Aluguel",
+            confirmButtonType: "red",
+        });
+
+        // 2. Se confirmado, executa
+        if (buttonElement) { // Feedback visual
+            buttonElement.disabled = true;
+            buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        }
+        try {
+            await deleteAluguel(aluguel.id); // API usa 'id'
+            showToast('Aluguel cancelado com sucesso!', 'success');
+            // Recarrega placa e alugueis
+            await Promise.all([loadPlacaDetalhes(), loadAlugueis()]);
+        } catch (error) {
+            showToast(error.message || 'Erro ao cancelar aluguel.', 'error');
+             // Restaura botão no erro
+             if (buttonElement) {
+                buttonElement.innerHTML = '<i class="fas fa-trash"></i>';
+                buttonElement.disabled = false;
+            }
+        }
+
+    } catch (error) {
+        // 3. Usuário cancelou
+        if (error.message !== "Ação cancelada pelo usuário.") {
+           console.error("Erro no processo de confirmação de cancelamento:", error);
+        }
     }
   };
 
-  const handleAluguelSubmit = async (e) => {
-      e.preventDefault();
-      setAluguelModalErrors({});
-      setIsSubmittingAluguel(true);
-
-      const validationRules = {
-           cliente_id: [{ type: 'required', message: 'Cliente é obrigatório.' }],
-           data_inicio: [{ type: 'required', message: 'Data de início é obrigatória.' }],
-           data_fim: [{ type: 'required', message: 'Data final é obrigatória.' }],
-      };
-
-      // Adaptação da validação
-      let formIsValid = true;
-      const newErrors = {};
-       for (const fieldName in validationRules) {
-           const value = aluguelFormData[fieldName];
-           const fieldRules = validationRules[fieldName];
-           let fieldIsValid = true;
-           // ... (lógica de validação similar às outras páginas) ...
-            if (fieldName === 'data_fim' && aluguelFormData.data_inicio && value <= aluguelFormData.data_inicio) {
-                newErrors.data_fim = 'A data final deve ser posterior à inicial.';
-                formIsValid = false;
-                fieldIsValid = false;
-            } else {
-                for (const rule of fieldRules) {
-                    if (!fieldIsValid) break;
-                     let isValidForRule = true;
-                     let errorMessage = rule.message || 'Valor inválido.';
-                     if (rule.type === 'required' && (!value || String(value).trim() === '')) {
-                         isValidForRule = false;
-                     }
-                     // Adicionar outras validações se necessário
-                     if (!isValidForRule) {
-                         newErrors[fieldName] = errorMessage; formIsValid = false; fieldIsValid = false;
-                     }
-                }
-            }
-       }
-      setAluguelModalErrors(newErrors);
-
-      if (!formIsValid) {
-        showToast('Corrija os erros no formulário.', 'error');
-        setIsSubmittingAluguel(false);
-         const firstErrorField = Object.keys(newErrors)[0];
-         if (firstErrorField) document.getElementById(firstErrorField)?.focus();
-        return;
-      }
-
-      const dataToSend = {
-        placa_id: placaId, // ID da placa atual
-        cliente_id: aluguelFormData.cliente_id,
-        data_inicio: aluguelFormData.data_inicio,
-        data_fim: aluguelFormData.data_fim,
-      };
-
-      try {
-        await createAluguel(dataToSend);
-        showToast('Placa alugada com sucesso!', 'success');
-        closeAluguelModal();
-        // Recarrega placa (para status) e alugueis
-        await Promise.all([loadPlacaDetalhes(), loadAlugueis()]);
-      } catch (error) {
-        showToast(error.message || 'Erro ao reservar a placa.', 'error');
-        // Adiciona erro específico se for conflito
-        if(error.message.toLowerCase().includes('reservada')) {
-            setAluguelModalErrors({ data_inicio: error.message, data_fim: error.message });
-        }
-      } finally {
-        setIsSubmittingAluguel(false);
-      }
-  };
-
-  // --- Funções de Exclusão de Aluguel ---
-   const handleDeleteAluguelClick = (aluguel) => {
-     setAluguelToDelete(aluguel);
-     // Usar window.confirm como placeholder
-     if (window.confirm(`Tem a certeza que deseja cancelar o aluguel para "${aluguel.cliente_nome || 'Cliente Apagado'}"?`)) {
-         confirmDeleteAluguel();
-     } else {
-         setAluguelToDelete(null);
-     }
-     // Se usar Modal React: setShowConfirmDelete(true);
-  };
-
-   const confirmDeleteAluguel = async () => {
-     if (!aluguelToDelete) return;
-     const idToDelete = aluguelToDelete.id; // API usa 'id'
-
-     // Desabilitar botão visualmente (mais complexo sem refs diretas)
-     // Podemos adicionar um estado isLoadingDelete se necessário
-
-     try {
-         await deleteAluguel(idToDelete);
-         showToast('Aluguel cancelado com sucesso!', 'success');
-         // Recarrega placa e alugueis
-         await Promise.all([loadPlacaDetalhes(), loadAlugueis()]);
-     } catch (error) {
-         showToast(error.message || 'Erro ao cancelar aluguel.', 'error');
-     } finally {
-          setAluguelToDelete(null);
-          // setShowConfirmDelete(false); // Se usar modal React
-     }
-  };
-
-
   // --- Renderização ---
-  if (isLoadingPlaca) {
-    return <Spinner message="A carregar detalhes da placa..." />;
-  }
+  // ... (renderização condicional isLoading/errorPlaca/!placa) ...
+  if (isLoadingPlaca) return <Spinner message="A carregar detalhes da placa..." />;
+  if (errorPlaca) return <div className="placa-details-page"><p className="error-message">Erro ao carregar placa: {errorPlaca}</p></div>;
+  if (!placa) return <div className="placa-details-page"><p>Placa não encontrada.</p></div>;
 
-  if (errorPlaca) {
-    return <div className="placa-details-page"><p className="error-message">Erro ao carregar placa: {errorPlaca}</p></div>;
-  }
-
-  if (!placa) {
-    // Se chegou aqui sem placa após loading, algo deu errado (ou ID inválido inicial)
-    return <div className="placa-details-page"><p>Placa não encontrada.</p></div>;
-  }
 
   // Prepara dados para renderizar
   const statusText = placa.disponivel ? 'Disponível' : (placa.cliente_nome ? 'Alugada' : 'Em Manutenção');
@@ -265,80 +231,51 @@ function PlacaDetailsPage() {
   const mapPosition = placa.coordenadas?.split(',').map(Number).filter(n => !isNaN(n));
 
   return (
-    <> {/* Fragmento para agrupar detalhes e histórico */}
+    <> {/* Fragmento */}
       <div className="placa-details-page">
-        {/* Detalhes da Placa */}
+        {/* Detalhes da Placa (JSX inalterado) */}
         <div className="placa-details-page__image-container">
-          <img src={imageUrl} alt={`Imagem da Placa ${placa.numero_placa}`} className="placa-details-page__image" onError={(e) => { e.target.onerror = null; e.target.src = placeholderUrl; }} />
+            {/* ... img ... */}
+             <img src={imageUrl} alt={`Imagem da Placa ${placa.numero_placa}`} className="placa-details-page__image" onError={(e) => { e.target.onerror = null; e.target.src = placeholderUrl; }} />
         </div>
         <div className="placa-details-page__info-container">
-          <div className="placa-details-page__header">
-            <h2 className="placa-details-page__numero">{placa.numero_placa}</h2>
-            <span className={`placa-details-page__status ${statusClass}`}>{statusText}</span>
-          </div>
-          {/* Info Grid */}
-          <div className="placa-details-page__info-grid">
-             {/* Localização */}
-             <div className="placa-details-page__info-item">
-                <span className="placa-details-page__info-label">Localização</span>
-                <p className="placa-details-page__info-value">{placa.nomeDaRua || 'N/A'}</p>
+            {/* ... header, info-grid ... */}
+             <div className="placa-details-page__header">
+                <h2 className="placa-details-page__numero">{placa.numero_placa}</h2>
+                <span className={`placa-details-page__status ${statusClass}`}>{statusText}</span>
              </div>
-             {/* Região */}
-             <div className="placa-details-page__info-item">
-                 <span className="placa-details-page__info-label">Região</span>
-                 {/* Assume que API retorna nome populado em placa.regiao.nome */}
-                 <p className="placa-details-page__info-value">{placa.regiao?.nome || 'N/A'}</p>
+             <div className="placa-details-page__info-grid">
+                 <div className="placa-details-page__info-item"><span className="placa-details-page__info-label">Localização</span><p className="placa-details-page__info-value">{placa.nomeDaRua || 'N/A'}</p></div>
+                 <div className="placa-details-page__info-item"><span className="placa-details-page__info-label">Região</span><p className="placa-details-page__info-value">{placa.regiao?.nome || 'N/A'}</p></div>
+                 <div className="placa-details-page__info-item"><span className="placa-details-page__info-label">Tamanho</span><p className="placa-details-page__info-value">{placa.tamanho || 'N/A'}</p></div>
+                 <div className="placa-details-page__info-item"><span className="placa-details-page__info-label">Coordenadas</span><p className="placa-details-page__info-value">{placa.coordenadas || 'N/A'}</p></div>
+                  {placa.cliente_nome && (<div className="placa-details-page__info-item"><span className="placa-details-page__info-label">Cliente Atual</span><p className="placa-details-page__info-value">{placa.cliente_nome} (até {formatDate(placa.aluguel_data_fim)})</p></div>)}
              </div>
-              {/* Tamanho */}
-             <div className="placa-details-page__info-item">
-                <span className="placa-details-page__info-label">Tamanho</span>
-                <p className="placa-details-page__info-value">{placa.tamanho || 'N/A'}</p>
-             </div>
-             {/* Coordenadas */}
-             <div className="placa-details-page__info-item">
-                <span className="placa-details-page__info-label">Coordenadas</span>
-                <p className="placa-details-page__info-value">{placa.coordenadas || 'N/A'}</p>
-             </div>
-             {/* Cliente (se alugada) */}
-              {placa.cliente_nome && (
-                  <div className="placa-details-page__info-item">
-                      <span className="placa-details-page__info-label">Cliente Atual</span>
-                      <p className="placa-details-page__info-value">{placa.cliente_nome} (até {formatDate(placa.aluguel_data_fim)})</p>
-                  </div>
-              )}
-          </div>
-          {/* Ações (Botão Alugar) */}
-          <div className="placa-details-page__actions">
-            <button
-              id="alugar-placa-btn"
-              className="placa-details-page__alugar-button"
-              onClick={openAluguelModal}
-              disabled={!placa.disponivel || clientes.length === 0} // Desabilita se indisponível OU sem clientes
-              title={!placa.disponivel ? 'Placa indisponível' : (clientes.length === 0 ? 'Nenhum cliente cadastrado' : 'Alugar esta placa')}
-            >
-              <i className="fas fa-calendar-plus"></i>
-              {placa.disponivel ? 'Alugar esta Placa' : statusText /* Mostra Alugada/Manutenção */}
-            </button>
-          </div>
+             {/* ... botão alugar ... */}
+             <div className="placa-details-page__actions">
+                <button id="alugar-placa-btn" /* ... onClick, disabled, title ... */
+                    className="placa-details-page__alugar-button"
+                    onClick={openAluguelModal}
+                    disabled={!placa.disponivel || clientes.length === 0}
+                    title={!placa.disponivel ? 'Placa indisponível' : (clientes.length === 0 ? 'Nenhum cliente cadastrado' : 'Alugar esta placa')}>
+                  <i className="fas fa-calendar-plus"></i>
+                  {placa.disponivel ? 'Alugar esta Placa' : statusText }
+                </button>
+              </div>
         </div>
 
-        {/* Mapa */}
+        {/* Mapa (JSX inalterado) */}
         <div id="details-map" className="placa-details-page__map-container">
-          {mapPosition && mapPosition.length === 2 ? (
-            <MapContainer center={mapPosition} zoom={15} style={{ height: '100%', width: '100%' }}>
-               <InvalidateMapSize /> {/* Componente para corrigir tamanho */}
-              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <Marker position={mapPosition}>
-                <Popup>{placa.numero_placa || 'Localização'}</Popup>
-              </Marker>
-            </MapContainer>
-          ) : (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-              <p>Mapa indisponível (coordenadas inválidas).</p>
-            </div>
-          )}
+            {/* ... MapContainer ou mensagem ... */}
+             {mapPosition && mapPosition.length === 2 ? (
+                <MapContainer center={mapPosition} zoom={15} style={{ height: '100%', width: '100%' }}>
+                   <InvalidateMapSize />
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <Marker position={mapPosition}><Popup>{placa.numero_placa || 'Localização'}</Popup></Marker>
+                </MapContainer>
+              ) : ( <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><p>Mapa indisponível.</p></div> )}
         </div>
-      </div>
+      </div> {/* Fim div .placa-details-page */}
 
       {/* Histórico de Alugueis */}
       <div className="placa-details-page__alugueis-container">
@@ -347,9 +284,9 @@ function PlacaDetailsPage() {
           {isLoadingAlugueis ? (
             <Spinner message="A carregar histórico..." />
           ) : errorAlugueis ? (
-            <p className="error-message">Erro ao carregar histórico: {errorAlugueis}</p>
+            <p className="error-message">Erro: {errorAlugueis}</p>
           ) : alugueis.length === 0 ? (
-            <p>Nenhum aluguel encontrado para esta placa.</p>
+            <p>Nenhum aluguel encontrado.</p>
           ) : (
             <table className="regioes-page__table"> {/* Reutiliza estilo */}
               <thead>
@@ -365,7 +302,8 @@ function PlacaDetailsPage() {
                       <button
                         className="regioes-page__action-button regioes-page__action-button--delete delete-aluguel-btn"
                         title="Cancelar Aluguel"
-                        onClick={() => handleDeleteAluguelClick(a)}
+                        // Passa o aluguel e o elemento botão para o handler
+                        onClick={(e) => handleDeleteAluguelClick(a, e.currentTarget)}
                       >
                         <i className="fas fa-trash"></i>
                       </button>
@@ -378,23 +316,22 @@ function PlacaDetailsPage() {
         </div>
       </div>
 
-      {/* Modal para Alugar */}
+      {/* Modal para Alugar (JSX inalterado) */}
       <Modal title="Alugar Placa" isOpen={isAluguelModalOpen} onClose={closeAluguelModal}>
+          {/* ... form de aluguel ... */}
           <form id="aluguel-form" className="modal-form" onSubmit={handleAluguelSubmit} noValidate>
              <div className="modal-form__grid">
-                 {/* Cliente */}
                  <div className="modal-form__input-group modal-form__input-group--full">
                      <label htmlFor="cliente_id">Cliente</label>
                      <select id="cliente_id" name="cliente_id"
                              className={`modal-form__input ${aluguelModalErrors.cliente_id ? 'input-error' : ''}`}
                              value={aluguelFormData.cliente_id} onChange={handleAluguelInputChange}
                              required disabled={isSubmittingAluguel}>
-                         <option value="">Selecione um cliente...</option>
+                         <option value="">Selecione...</option>
                          {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                      </select>
                      {aluguelModalErrors.cliente_id && <div className="modal-form__error-message">{aluguelModalErrors.cliente_id}</div>}
                  </div>
-                 {/* Data Início */}
                  <div className="modal-form__input-group">
                      <label htmlFor="data_inicio">Data de Início</label>
                      <input type="date" id="data_inicio" name="data_inicio"
@@ -403,7 +340,6 @@ function PlacaDetailsPage() {
                             required disabled={isSubmittingAluguel} />
                      {aluguelModalErrors.data_inicio && <div className="modal-form__error-message">{aluguelModalErrors.data_inicio}</div>}
                  </div>
-                 {/* Data Fim */}
                   <div className="modal-form__input-group">
                      <label htmlFor="data_fim">Data Final</label>
                      <input type="date" id="data_fim" name="data_fim"
@@ -414,19 +350,15 @@ function PlacaDetailsPage() {
                  </div>
              </div>
              <div className="modal-form__actions">
-                 <button type="button" className="modal-form__button modal-form__button--cancel" onClick={closeAluguelModal} disabled={isSubmittingAluguel}>
-                     Cancelar
-                 </button>
-                 <button type="submit" className="modal-form__button modal-form__button--confirm" disabled={isSubmittingAluguel}>
-                     {isSubmittingAluguel ? 'A reservar...' : 'Reservar Placa'}
-                 </button>
+                 <button type="button" className="modal-form__button modal-form__button--cancel" onClick={closeAluguelModal} disabled={isSubmittingAluguel}>Cancelar</button>
+                 <button type="submit" className="modal-form__button modal-form__button--confirm" disabled={isSubmittingAluguel}>{isSubmittingAluguel ? 'A reservar...' : 'Reservar Placa'}</button>
              </div>
          </form>
       </Modal>
 
-       {/* Modal de Confirmação para Apagar Aluguel (se tiver um componente React) */}
-       {/* {showConfirmDelete && aluguelToDelete && ( ... )} */}
-    </>
+      {/* O ConfirmationModal é renderizado pelo Provider */}
+
+    </> /* Fim Fragmento */
   );
 }
 

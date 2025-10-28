@@ -1,18 +1,17 @@
-// src/pages/RegisterPage.jsx
-import { useForm } from 'react-hook-form'; // Importa o hook principal
+// src/pages/Register/RegisterPage.jsx (Refatorado com react-hook-form e correção do 'password = ""')
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { registerEmpresa } from '../../services/api'; 
+import { useForm } from 'react-hook-form'; 
+import { registerEmpresa } from '../../services/api';
 import { useToast } from '../../components/ToastNotification/ToastNotification';
-import ApiKeyModal from '../../components/ApiKeyModal/ApiKeyModal'; // Modal para mostrar a chave
-import { validateForm, validateCNPJ } from '../../utils/validator'; // Funções de validação
-import './Register.css'; // CSS da página
-// src/pages/Register/RegisterPage.jsx (Refatorado com react-hook-form)
+import ApiKeyModal from '../../components/ApiKeyModal/ApiKeyModal'; 
+import { validateCNPJ } from '../../utils/validator'; 
+import './Register.css'; 
 
 function RegisterPage() {
   // Inicializa o react-hook-form
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm({
-    mode: 'onBlur', // Valida ao sair do campo
+    mode: 'onBlur', 
     defaultValues: {
       nome_empresa: '', cnpj: '', nome: '', sobrenome: '',
       username: '', email: '', password: '', confirmPassword: '',
@@ -32,8 +31,13 @@ function RegisterPage() {
   useEffect(() => {
     let score = 0;
     let text = 'Muito Fraca';
-    if (!password) password = '';
-    if (password.length >= 8) score++;
+    
+    // CORREÇÃO APLICADA: 
+    // A variável 'password' é uma constante (const) e garantida como string pelo watch('password', '').
+    // O código problemático 'if (!password) password = '';' foi removido para evitar o aviso/erro de reatribuição.
+    
+    // Calcula a força da senha
+    if (password.length >= 8) score++; 
     if (/[A-Z]/.test(password)) score++;
     if (/[0-9]/.test(password)) score++;
     if (/[^A-Za-z0-9]/.test(password)) score++;
@@ -60,24 +64,20 @@ function RegisterPage() {
 
   // --- Submissão do Formulário ---
   const onSubmit = async (data) => {
-    // A validação de campos e senhas iguais já foi feita pelo RHF.
-    // Prepara dados para enviar (remove confirmPassword)
     const dataToSend = { ...data };
-    delete dataToSend.confirmPassword;
+    delete dataToSend.confirmPassword; // Remove o campo de confirmação antes de enviar
 
     try {
       const response = await registerEmpresa(dataToSend);
       if (response && response.fullApiKey) {
         setGeneratedApiKey(response.fullApiKey);
-        setIsApiKeyModalOpen(true); // Abre o modal para mostrar a chave
+        setIsApiKeyModalOpen(true); 
       } else {
         showToast('Empresa registada! Faça login.', 'success');
         navigate('/login');
       }
     } catch (error) {
       showToast(error.message || 'Erro ao registar.', 'error');
-      // O RHF não lida automaticamente com erros de API que afetam campos (ex: duplicação)
-      // O erro de duplicação deve ser tratado aqui no controller ou no serviço
       console.error("Erro no registo (API):", error);
     }
   };
@@ -93,7 +93,6 @@ function RegisterPage() {
       <div className="register-page">
         <div className="register-page__container">
           <div className="register-page__form-wrapper">
-            {/* O handleSubmit do RHF envolve nossa função de submissão */}
             <form id="register-form" className="register-page__form" onSubmit={handleSubmit(onSubmit)} noValidate>
               <div className="register-page__form-header">
                 <h2 className="register-page__form-title">Crie a sua Conta</h2>
@@ -172,7 +171,8 @@ function RegisterPage() {
                          className={`register-page__input ${errors.confirmPassword ? 'input-error' : ''}`}
                          {...register('confirmPassword', {
                              required: 'A confirmação de senha é obrigatória.',
-                             validate: (value) => value === password || 'As senhas não coincidem.'
+                             // Validação de correspondência com o campo 'password'
+                             validate: (value) => value === password || 'As senhas não coincidem.' 
                          })} />
                   <label htmlFor="admin-confirm-password" className="register-page__label">Confirmar Senha</label>
                   {errors.confirmPassword && <div className="modal-form__error-message">{errors.confirmPassword.message}</div>}

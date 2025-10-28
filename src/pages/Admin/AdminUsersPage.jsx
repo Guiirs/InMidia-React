@@ -1,13 +1,14 @@
-// src/pages/AdminUsersPage.jsx
-import React, { useState, useEffect } from 'react';
+// src/pages/AdminUsers/AdminUsersPage.jsx
+import React, { useState, useEffect, useCallback } from 'react';
 import { fetchAllUsers, updateUserRole, deleteUser, createUser } from '../../services/api';
 import { useToast } from '../../components/ToastNotification/ToastNotification';
-import { useAuth } from '../../context/AuthContext'; // Para obter ID do admin logado
+import { useAuth } from '../../context/AuthContext';
 import Spinner from '../../components/Spinner/Spinner';
 import Modal from '../../components/Modal/Modal';
-import { validateForm } from '../../utils/validator';
-// Importar ConfirmationModal React (se tiver um) ou usar window.confirm
-import './AdminUsers.css'; // CSS da página
+import { useConfirmation } from '../../context/ConfirmationContext'; // <<< NOVO IMPORT
+// O validateForm original (DOM-based) foi simplificado aqui
+// Se fosse usar react-hook-form (Refinamento 6), a estrutura seria diferente
+import './AdminUsers.css'; 
 
 function AdminUsersPage() {
   const [users, setUsers] = useState([]);
@@ -18,14 +19,12 @@ function AdminUsersPage() {
   const [modalFormData, setModalFormData] = useState({ nome: '', sobrenome: '', username: '', email: '', password: '', role: 'user' });
   const [modalErrors, setModalErrors] = useState({});
 
-  // Confirmação de exclusão
-  const [userToDelete, setUserToDelete] = useState(null);
-
   const showToast = useToast();
-  const { user: loggedInUser } = useAuth(); // Obtém dados do admin logado
+  const { user: loggedInUser } = useAuth(); 
+  const showConfirmation = useConfirmation(); // <<< Inicializa o hook de confirmação
 
-  // Carrega utilizadores
-  const loadUsers = async () => {
+  // --- Funções de Carregamento ---
+  const loadUsers = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -37,11 +36,11 @@ function AdminUsersPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showToast]);
 
   useEffect(() => {
     loadUsers();
-  }, []); // Carrega ao montar
+  }, [loadUsers]);
 
   // --- Funções do Modal (Adicionar Utilizador) ---
   const openAddModal = () => {
@@ -52,7 +51,7 @@ function AdminUsersPage() {
 
   const closeModal = () => {
     setIsModalOpen(false);
-    setIsSubmitting(false); // Garante reset
+    setIsSubmitting(false); 
   };
 
   const handleModalInputChange = (e) => {
@@ -62,94 +61,69 @@ function AdminUsersPage() {
       setModalErrors(prev => ({ ...prev, [name]: undefined }));
     }
   };
-
+  
+  // Lógica de Submissão do Modal (com validação adaptada)
   const handleAddUserSubmit = async (e) => {
     e.preventDefault();
     setModalErrors({});
     setIsSubmitting(true);
 
-    const validationRules = {
-      nome: [{ type: 'required' }],
-      sobrenome: [{ type: 'required' }],
-      username: [{ type: 'required' }, { type: 'minLength', param: 3 }, { type: 'maxLength', param: 50 }],
-      email: [{ type: 'required' }, { type: 'email' }, { type: 'maxLength', param: 100 }],
-      password: [{ type: 'required' }, { type: 'minLength', param: 6 }]
-    };
-
-    // Adaptação da validação para React state
+    const data = modalFormData;
     let formIsValid = true;
     const newErrors = {};
-    for (const fieldName in validationRules) {
-        const value = modalFormData[fieldName];
-        const fieldRules = validationRules[fieldName];
-        let fieldIsValid = true;
+    const requiredFields = ['nome', 'sobrenome', 'username', 'email', 'password'];
 
-        const isOptional = fieldRules.some(rule => rule.type === 'optional');
-        if (isOptional && (!value || String(value).trim() === '')) continue;
-
-        for (const rule of fieldRules) {
-            if (!fieldIsValid) break;
-            let isValidForRule = true;
-            let errorMessage = rule.message || 'Valor inválido.';
-
-            try {
-                switch (rule.type) {
-                    case 'required': isValidForRule = value && String(value).trim() !== ''; break;
-                    case 'email': isValidForRule = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value)); break;
-                    case 'minLength': isValidForRule = String(value).length >= rule.param; break;
-                    case 'maxLength': isValidForRule = String(value).length <= rule.param; break;
-                }
-            } catch (validationError) { isValidForRule = false; errorMessage = validationError.message || errorMessage; }
-
-            if (!isValidForRule) {
-                newErrors[fieldName] = errorMessage; formIsValid = false; fieldIsValid = false;
-            }
+    // Validação básica
+    requiredFields.forEach(field => {
+        if (!data[field] || String(data[field]).trim() === '') {
+            newErrors[field] = `O campo ${field} é obrigatório.`;
+            formIsValid = false;
         }
+    });
+    if (formIsValid && data.email && !/^\S+@\S+\.\S+$/.test(data.email)) {
+         newErrors.email = 'Formato de e-mail inválido.';
+         formIsValid = false;
     }
-    setModalErrors(newErrors);
+    if (formIsValid && data.password && data.password.length < 6) {
+         newErrors.password = 'A senha deve ter no mínimo 6 caracteres.';
+         formIsValid = false;
+    }
 
+    setModalErrors(newErrors);
 
     if (!formIsValid) {
       showToast('Corrija os erros no formulário.', 'error');
       setIsSubmitting(false);
-      const firstErrorField = Object.keys(newErrors)[0];
-       if (firstErrorField) {
-           const inputElement = document.getElementById(firstErrorField); // Assume IDs correspondem a names
-           inputElement?.focus();
-       }
       return;
     }
 
     try {
-      await createUser(modalFormData);
+      await createUser(data);
       showToast('Utilizador criado com sucesso!', 'success');
       closeModal();
       loadUsers(); // Recarrega
     } catch (error) {
       showToast(error.message || 'Erro ao criar utilizador.', 'error');
-       // Adiciona erro específico ao campo se for duplicação
-      if(error.message.toLowerCase().includes('email') || error.message.toLowerCase().includes('e-mail')) {
-          setModalErrors(prev => ({...prev, email: error.message}));
-      } else if (error.message.toLowerCase().includes('username') || error.message.toLowerCase().includes('utilizador')) {
-           setModalErrors(prev => ({...prev, username: error.message}));
+      // Adiciona erro específico ao campo se for duplicação
+      if(error.message.toLowerCase().includes('email')) {
+          newErrors.email = error.message;
+      } else if (error.message.toLowerCase().includes('username')) {
+           newErrors.username = error.message;
       }
-      setIsSubmitting(false); // Reabilita botão no erro
+      setModalErrors({...newErrors});
+      setIsSubmitting(false); 
     }
-    // finally não é necessário
   };
+
 
   // --- Funções da Tabela (Update Role, Delete) ---
   const handleRoleChange = async (userId, newRole, selectElement) => {
      const originalRole = users.find(u => u._id === userId)?.role;
-     if (!originalRole || !selectElement) return; // Segurança
-
-     // Atualiza visualmente primeiro (otimista) - opcional
-     // selectElement.value = newRole;
 
      try {
          await updateUserRole(userId, newRole);
          showToast('Função atualizada com sucesso!', 'success');
-         // Atualiza o estado local para refletir a mudança
+         // Atualiza o estado local
          setUsers(prevUsers => prevUsers.map(u => u._id === userId ? { ...u, role: newRole } : u));
      } catch (error) {
          showToast(error.message || 'Erro ao atualizar função.', 'error');
@@ -158,36 +132,37 @@ function AdminUsersPage() {
      }
   };
 
-  const handleDeleteClick = (user) => {
-     setUserToDelete(user);
-     // Usar window.confirm como placeholder
-     if (window.confirm(`Tem a certeza que deseja apagar o utilizador "${user.username}"? Esta ação é irreversível.`)) {
-         confirmDelete();
-     } else {
-         setUserToDelete(null);
-     }
-     // Se usar Modal React: setShowConfirmDelete(true);
-  };
-
-   const confirmDelete = async () => {
-     if (!userToDelete) return;
-     const idToDelete = userToDelete._id;
-
-     // Idealmente, desabilitar botão/linha
+  // Handler de Exclusão (agora usa o hook useConfirmation)
+  const handleDeleteClick = async (user) => {
      try {
-         await deleteUser(idToDelete);
-         showToast('Utilizador apagado com sucesso!', 'success');
-         loadUsers(); // Recarrega
+         // 1. Abre o modal de confirmação
+         await showConfirmation({
+             message: `Tem a certeza de que deseja apagar o utilizador "${user.username}"? Esta ação é irreversível.`,
+             title: "Confirmar Exclusão de Utilizador",
+             confirmText: "Sim, Apagar",
+             confirmButtonType: "red", 
+         });
+ 
+         // 2. Se o usuário confirmar (Promise resolvida), executa a exclusão
+         try {
+             await deleteUser(user._id); // Passa o ID do utilizador
+             showToast('Utilizador apagado com sucesso!', 'success');
+             loadUsers(); // Recarrega
+         } catch (error) {
+             showToast(error.message || 'Erro ao apagar utilizador.', 'error');
+         }
+ 
      } catch (error) {
-         showToast(error.message || 'Erro ao apagar utilizador.', 'error');
-         // Reabilitar botão/linha
-     } finally {
-          setUserToDelete(null);
-          // setShowConfirmDelete(false); // Se usar modal React
+         // 3. Usuário cancelou ou tentou apagar a própria conta (erro 400 do backend)
+         if (error.message !== "Ação cancelada pelo usuário.") {
+            // A API pode retornar 400 se tentar apagar a própria conta
+            showToast(error.message || "Ação cancelada.", 'error');
+         }
      }
   };
 
-  // --- Renderização ---
+
+  // --- Renderização da Tabela ---
   const renderTableBody = () => {
     if (isLoading) {
       return <tr><td colSpan="5"><Spinner message="A carregar utilizadores..." /></td></tr>;
@@ -201,10 +176,9 @@ function AdminUsersPage() {
     return users.map(user => {
       const isCurrentUser = loggedInUser && String(user._id) === String(loggedInUser.id);
       const disableActions = isCurrentUser;
-      const disableReason = isCurrentUser ? "Não pode alterar a sua própria conta aqui" : "";
+      const disableReason = isCurrentUser ? "Não pode alterar/apagar a sua própria conta aqui" : "";
 
       return (
-        // Usa _id como key
         <tr key={user._id}>
           <td>{user._id}</td>
           <td>{user.username}</td>
@@ -212,7 +186,7 @@ function AdminUsersPage() {
           <td>
             <select
               className="admin-users-page__role-select"
-              value={user.role} // Controlado pelo estado 'users'
+              value={user.role} 
               onChange={(e) => handleRoleChange(user._id, e.target.value, e.target)}
               disabled={disableActions}
               title={disableReason}
@@ -264,54 +238,46 @@ function AdminUsersPage() {
       <Modal title="Adicionar Novo Utilizador" isOpen={isModalOpen} onClose={closeModal}>
         <form id="user-form" className="modal-form" onSubmit={handleAddUserSubmit} noValidate>
             <div className="modal-form__grid">
-                {/* Campos do formulário (Nome, Sobrenome, Username, Email, Password, Role) */}
-                 {/* Nome */}
+                {/* Campos do formulário */}
                  <div className="modal-form__input-group">
                     <label htmlFor="nome">Nome</label>
                     <input type="text" id="nome" name="nome" value={modalFormData.nome} onChange={handleModalInputChange}
                            className={`modal-form__input ${modalErrors.nome ? 'input-error' : ''}`} required disabled={isSubmitting} />
                     {modalErrors.nome && <div className="modal-form__error-message">{modalErrors.nome}</div>}
                  </div>
-                 {/* Sobrenome */}
                  <div className="modal-form__input-group">
                     <label htmlFor="sobrenome">Sobrenome</label>
                     <input type="text" id="sobrenome" name="sobrenome" value={modalFormData.sobrenome} onChange={handleModalInputChange}
                            className={`modal-form__input ${modalErrors.sobrenome ? 'input-error' : ''}`} required disabled={isSubmitting} />
                     {modalErrors.sobrenome && <div className="modal-form__error-message">{modalErrors.sobrenome}</div>}
                  </div>
-                  {/* Username */}
-                 <div className="modal-form__input-group modal-form__input-group--full">
+                  <div className="modal-form__input-group modal-form__input-group--full">
                     <label htmlFor="username">Nome de Utilizador</label>
                     <input type="text" id="username" name="username" value={modalFormData.username} onChange={handleModalInputChange}
                            className={`modal-form__input ${modalErrors.username ? 'input-error' : ''}`} required disabled={isSubmitting} />
                     {modalErrors.username && <div className="modal-form__error-message">{modalErrors.username}</div>}
                  </div>
-                 {/* Email */}
                   <div className="modal-form__input-group modal-form__input-group--full">
                     <label htmlFor="email">E-mail</label>
                     <input type="email" id="email" name="email" value={modalFormData.email} onChange={handleModalInputChange}
                            className={`modal-form__input ${modalErrors.email ? 'input-error' : ''}`} required disabled={isSubmitting} />
                     {modalErrors.email && <div className="modal-form__error-message">{modalErrors.email}</div>}
                  </div>
-                {/* Password */}
-                 <div className="modal-form__input-group">
+                <div className="modal-form__input-group">
                     <label htmlFor="password">Senha</label>
                     <input type="password" id="password" name="password" value={modalFormData.password} onChange={handleModalInputChange}
                            className={`modal-form__input ${modalErrors.password ? 'input-error' : ''}`} required disabled={isSubmitting} />
                     {modalErrors.password && <div className="modal-form__error-message">{modalErrors.password}</div>}
                  </div>
-                {/* Role */}
-                 <div className="modal-form__input-group">
+                <div className="modal-form__input-group">
                     <label htmlFor="role">Função</label>
                     <select id="role" name="role" value={modalFormData.role} onChange={handleModalInputChange}
                             className="modal-form__input" disabled={isSubmitting}>
                         <option value="user">Utilizador</option>
                         <option value="admin">Admin</option>
                     </select>
-                    {/* Não costuma ter erro aqui */}
-                 </div>
+                </div>
             </div>
-            {/* Ações do Modal */}
             <div className="modal-form__actions">
                 <button type="button" className="modal-form__button modal-form__button--cancel" onClick={closeModal} disabled={isSubmitting}>
                     Cancelar
@@ -323,8 +289,6 @@ function AdminUsersPage() {
         </form>
       </Modal>
 
-       {/* Modal de Confirmação (se tiver um componente React) */}
-       {/* {showConfirmDelete && userToDelete && ( ... )} */}
     </div>
   );
 }
