@@ -1,0 +1,44 @@
+/* --- Estilos da Página de Relatórios com BEM --- */
+
+/* Bloco Principal */
+.relatorios-page {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Duas colunas de tamanho igual */
+    gap: 3rem; /* Ajustado */
+}
+
+/* Elemento do Bloco */
+.relatorios-page__chart-container {
+    background-color: var(--bg-secondary-color);
+    padding: 2.4rem; /* Ajustado */
+    border-radius: var(--border-radius);
+    border: 1px solid var(--input-border);
+    box-shadow: var(--box-shadow);
+}
+
+.relatorios-page__chart-title {
+    margin-top: 0;
+    margin-bottom: 2rem; /* Ajustado */
+    font-size: 1.8rem; /* Ajustado (era 1.2rem * 1.5) */
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+/* Estilo para o canvas do gráfico, para garantir que ele se ajuste ao contentor */
+.relatorios-page__chart-canvas {
+    width: 100% !important; /* Mantido */
+    height: 350px !important; /* Mantido em px */
+    /* ou height: 35rem !important; */
+}
+
+/* Modificador para um gráfico que ocupe a largura total */
+.relatorios-page__chart-container--full-width {
+    grid-column: 1 / -1; /* Ocupa as duas colunas */
+}
+
+/* Responsividade */
+@media (max-width: 992px) { /* Mantido breakpoint */
+    .relatorios-page {
+        grid-template-columns: 1fr; /* Coluna única */
+    }
+}

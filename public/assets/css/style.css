@@ -1,0 +1,27 @@
+/* frontend/assets/css/style.css */
+
+/* Importa a base (variáveis, resets, etc.) */
+@import url('base.css');
+
+/* --- PÁGINAS --- */
+@import url('../../pages/Login/Login.css');
+@import url('../../pages/Register/Register.css');
+@import url('../../pages/Dashboard/Dashboard.css'); /* Mantém (para o resumo e gráficos) */
+@import url('../../pages/Placas/Placas.css'); /* <<< ADICIONE ESTE */
+@import url('../../pages/Regioes/Regioes.css');
+@import url('../../pages/Map/Map.css');
+@import url('../../pages/Relatorios/Relatorios.css');
+@import url('../../pages/User/User.css');
+@import url('../../pages/EmpresaSettings/EmpresaSettings.css');
+@import url('../../pages/AdminUsers/AdminUsers.css');
+@import url('../../pages/PlacaFormPage/PlacaFormPage.css');
+@import url('../../pages/ForgotPassword/ForgotPassword.css'); 
+@import url('../../pages/PlacaDetailsPage/PlacaDetailsPage.css');
+@import url('../../pages/Clientes/Clientes.css');
+
+/* --- COMPONENTES --- */
+@import url('../../components/Sidebar/Sidebar.css');
+@import url('../../components/Header/Header.css');
+@import url('../../components/PlacaCard/PlacaCard.css');
+@import url('../../components/Spinner/Spinner.css');
+@import url('../../components/Modal/Modal.css');

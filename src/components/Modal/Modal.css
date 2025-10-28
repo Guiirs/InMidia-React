@@ -1,0 +1,148 @@
+/* --- Estilos do Componente Modal com BEM --- */
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    padding: 1.5rem; /* Adiciona padding para evitar que o modal toque nas bordas em telas pequenas */
+    box-sizing: border-box;
+}
+
+.modal--visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal__content {
+    background-color: var(--bg-secondary-color);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--input-border);
+    padding: 3rem; /* Ajustado (era 2rem * 1.5) */
+    width: 100%;
+    max-width: 600px; /* Mantido em px */
+    box-shadow: var(--box-shadow);
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+    max-height: 90vh; /* Limita a altura máxima */
+    overflow-y: auto; /* Adiciona scroll se o conteúdo for maior */
+}
+
+.modal--visible .modal__content {
+    transform: scale(1);
+}
+
+.modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem; /* Ajustado */
+    padding-bottom: 1.5rem; /* Ajustado */
+    border-bottom: 1px solid var(--input-border);
+}
+
+.modal__title {
+    font-size: 2rem; /* Ajustado (era 1.25rem * 1.6) */
+    font-weight: 600;
+    margin: 0;
+}
+
+.modal__close-btn {
+    background: none;
+    border: none;
+    color: var(--text-color-light);
+    font-size: 2.4rem; /* Ajustado (era 1.5rem * 1.6) */
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.modal__body {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem; /* Ajustado */
+}
+
+/* --- ESTILOS DO FORMULÁRIO CORRIGIDOS AQUI --- */
+
+/* 1. Define a grelha de duas colunas */
+.modal-form__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem; /* Ajustado */
+}
+
+.modal-form__input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem; /* Ajustado */
+}
+
+/* 2. Modificador para campos de largura total */
+.modal-form__input-group--full {
+    grid-column: 1 / -1; /* Faz o campo ocupar as duas colunas */
+}
+
+.modal-form__label {
+    font-weight: 500;
+    color: var(--text-color-light);
+    font-size: 1.4rem; /* Tamanho da label */
+}
+
+.modal-form__input,
+.modal-form__select {
+    background-color: var(--bg-color);
+    border: 1px solid var(--input-border);
+    border-radius: 1rem; /* Ajustado (era 10px) */
+    padding: 1.2rem 1.5rem; /* Ajustado (era 0.75rem, 1rem * 1.5) */
+    color: var(--text-color);
+    font-size: 1.5rem; /* Ajustado */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* O resto do ficheiro continua o mesmo */
+.modal-form__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1.5rem; /* Ajustado */
+    margin-top: 2rem; /* Ajustado */
+    padding-top: 2rem; /* Ajustado */
+    border-top: 1px solid var(--input-border);
+}
+.modal-form__button {
+    padding: 1.2rem 2.4rem; /* Ajustado (era 0.75rem, 1.5rem * 1.6) */
+    border-radius: 1rem; /* Ajustado (era 10px) */
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    font-size: 1.5rem; /* Ajustado */
+}
+.modal-form__button--cancel {
+    background-color: var(--input-border);
+    color: var(--text-color);
+}
+.modal-form__button--confirm {
+    background-color: var(--accent-green);
+    color: white;
+}
+
+/* Mensagem de erro já estava ajustada em base.css */
+/* .modal-form__error-message { ... } */
+
+/* Estilos para preview de imagem dentro do modal (se usado) */
+.placa-form-page__image-preview-container {
+    /* Mantém os estilos do PlacaFormPage.css, mas ajusta se necessário */
+    height: 10rem; /* Ajustado (era 100px) */
+    margin-top: 1rem; /* Ajustado */
+    /* ... outros estilos ... */
+}

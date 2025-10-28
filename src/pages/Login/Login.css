@@ -1,0 +1,223 @@
+/* --- Estilos da Página de Login com BEM --- */
+
+/* Bloco Principal */
+.login-page {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-image: url('https://images.unsplash.com/photo-1599687351148-1644e5461152?q=80&w=2070'); /* URL mantida */
+    background-size: cover;
+    background-position: center;
+    padding: 2rem; /* Mantido */
+    box-sizing: border-box;
+    animation: login-page__fade-in 1s ease-in-out;
+}
+
+@keyframes login-page__fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Container Principal */
+.login-page__container {
+    display: flex;
+    width: 100%;
+    max-width: 950px; /* Mantido em px */
+    min-height: 600px; /* Mantido em px */
+    background-color: transparent; /* Fundo de vidro */
+    border-radius: 2.4rem; /* Ajustado (era 24px) */
+    overflow: hidden;
+    box-shadow: 0 2.5rem 5rem -1.2rem rgba(0, 0, 0, 0.4); /* Ajustado */
+    animation: login-page__pop-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    transform: scale(0.9);
+    opacity: 0;
+}
+
+@keyframes login-page__pop-in {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.login-page__showcase {
+    flex: 1;
+    background-color: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 4rem; /* Mantido */
+    box-sizing: border-box;
+}
+
+.login-page__logo-img {
+    height: 8rem; /* Ajustado (era 80px) */
+    filter: brightness(0) invert(1);
+    margin-bottom: 3rem; /* Ajustado */
+    align-self: flex-start;
+}
+
+.login-page__showcase-title {
+    font-size: 3.6rem; /* Ajustado (era 2.5rem * 1.44) */
+    font-weight: 700;
+    margin-bottom: 1.5rem; /* Ajustado */
+    line-height: 1.2;
+}
+
+.login-page__showcase-text {
+    font-size: 1.6rem; /* Ajustado (era 1rem * 1.6) */
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.login-page__form-wrapper {
+    flex: 1;
+    background-color: rgba(255, 255, 255, 0.95);
+    color: #1c1e21; /* Cor do texto no formulário */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem; /* Mantido */
+    box-sizing: border-box;
+}
+
+.login-page__form {
+    width: 100%;
+    max-width: 380px; /* Mantido em px */
+}
+
+.login-page__form-header {
+    text-align: center;
+    margin-bottom: 3rem; /* Ajustado */
+}
+
+.login-page__form-title {
+    font-size: 3rem; /* Ajustado (era 2rem * 1.5) */
+    font-weight: 600;
+    color: #1c1e21;
+    margin-bottom: 0.8rem; /* Adicionado espaço */
+}
+
+.login-page__form-subtitle {
+    font-size: 1.6rem; /* Ajustado (era 1rem * 1.6) */
+    color: #606770; /* Cinza escuro */
+}
+
+.login-page__input-group {
+    position: relative;
+    margin-bottom: 2rem; /* Ajustado */
+}
+
+.login-page__input {
+    background-color: #f0f2f5; /* Cinza claro */
+    border: 1px solid #e4e6eb; /* Cinza mais claro */
+    border-radius: 0.8rem; /* Ajustado (era 8px) */
+    padding: 1.6rem; /* Ajustado (era 16px) */
+    font-size: 1.6rem; /* Ajustado (era 1rem * 1.6) */
+    color: #1c1e21;
+    width: 100%;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+}
+
+.login-page__input::placeholder {
+    color: #606770;
+}
+
+.login-page__input:focus {
+    outline: none;
+    border-color: var(--accent-red); /* Usa variável */
+    box-shadow: 0 0 0 0.3rem rgba(211, 47, 47, 0.2); /* Usa cor base do accent-red */
+}
+
+.login-page__form-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.4rem; /* Ajustado (era 0.9rem * 1.55) */
+    margin-bottom: 2rem; /* Ajustado */
+}
+
+.login-page__form-link {
+    color: var(--accent-red); /* Usa variável */
+    text-decoration: none;
+    font-weight: 500;
+}
+.login-page__form-link:hover {
+    text-decoration: underline;
+}
+
+.login-page__button {
+    background: linear-gradient(45deg, #d32f2f, #ff5252); /* Mantido */
+    color: #ffffff;
+    border-radius: 0.8rem; /* Ajustado (era 8px) */
+    padding: 1.6rem; /* Ajustado (era 16px) */
+    font-size: 1.6rem; /* Ajustado (era 1rem * 1.6) */
+    font-weight: 600;
+    letter-spacing: 0.05rem; /* Ajustado */
+    width: 100%;
+    transition: all 0.3s ease;
+    box-shadow: 0 0.4rem 1.5rem rgba(255, 82, 82, 0.4); /* Ajustado */
+    border: none;
+    cursor: pointer;
+}
+.login-page__button:hover {
+    transform: translateY(-0.2rem); /* Ajustado */
+    box-shadow: 0 0.6rem 2rem rgba(255, 82, 82, 0.5); /* Ajustado */
+}
+
+.login-page__register-link {
+    text-align: center;
+    font-size: 1.4rem; /* Ajustado (era 0.9rem * 1.55) */
+    color: #606770;
+    padding-top: 2rem; /* Ajustado */
+    border-top: 1px solid #e4e6eb;
+    margin-top: 2rem; /* Ajustado */
+}
+
+/* Responsividade */
+@media (max-width: 768px) { /* Mantido breakpoint 768px */
+    .login-page__showcase {
+        display: none; /* Mantido */
+    }
+    .login-page__form-wrapper {
+        flex: 1;
+        /* Usa variáveis de tema para fundo em telas menores */
+        background-color: var(--bg-color);
+        padding: 2rem; /* Reduz padding */
+    }
+    .login-page__form {
+        max-width: 450px; /* Mantido em px */
+        background-color: var(--bg-secondary-color);
+        padding: 3rem; /* Aumenta padding interno do form */
+        border-radius: var(--border-radius);
+        border: 1px solid var(--input-border);
+        box-shadow: var(--box-shadow);
+    }
+}
+
+@media (max-width: 576px) {
+    .login-page__form-wrapper {
+        padding: 1rem;
+        background-color: transparent; /* Remove fundo extra no wrapper */
+    }
+    .login-page__form {
+         padding: 2rem; /* Ajusta padding */
+    }
+     .login-page__form-title {
+        font-size: 2.4rem; /* Reduzido */
+    }
+     .login-page__form-subtitle {
+        font-size: 1.4rem; /* Reduzido */
+    }
+    .login-page__container {
+        min-height: auto; /* Permite altura automática */
+    }
+}
