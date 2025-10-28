@@ -1,8 +1,7 @@
-// src/utils/config.js (Exemplo ajustado)
-const API_BASE_URL_DEV = 'http://localhost:4000/api'; // Ajuste a porta se necessário
-const API_BASE_URL_PROD = 'https://inmidia.squareweb.app/api'; // Sua URL de produção
+// src/utils/config.js
+const API_BASE_URL_PROD = 'https://inmidia.squareweb.app/api';
+const API_BASE_URL_DEV = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'; // Usa .env se definido, senão localhost
 
 export const API_BASE_URL = import.meta.env.DEV ? API_BASE_URL_DEV : API_BASE_URL_PROD;
-// Vite usa import.meta.env.DEV para verificar o ambiente
 
 export const ITEMS_PER_PAGE = 10;
