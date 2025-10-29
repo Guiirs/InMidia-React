@@ -1,4 +1,6 @@
-/* --- Estilos do Componente Modal com BEM --- */
+/* src/components/Modal/Modal.css */
+
+/* --- Estilos Base do Componente Modal com BEM --- */
 
 .modal {
     position: fixed;
@@ -6,16 +8,17 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(0, 0, 0, 0.7); /* Fundo escuro semi-transparente */
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 2000;
+    z-index: 2000; /* Garante que fica acima da maioria dos conteúdos */
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;
-    padding: 1.5rem; /* Adiciona padding para evitar que o modal toque nas bordas em telas pequenas */
+    padding: 1.5rem; /* Evita que o modal toque nas bordas */
     box-sizing: border-box;
+    backdrop-filter: blur(5px); /* Efeito de desfoque (opcional) */
 }
 
 .modal--visible {
@@ -27,122 +30,152 @@
     background-color: var(--bg-secondary-color);
     border-radius: var(--border-radius);
     border: 1px solid var(--input-border);
-    padding: 3rem; /* Ajustado (era 2rem * 1.5) */
+    padding: 3rem;
     width: 100%;
-    max-width: 600px; /* Mantido em px */
+    max-width: 600px; /* Largura máxima padrão, pode ser sobrescrita */
     box-shadow: var(--box-shadow);
     transform: scale(0.95);
     transition: transform 0.3s ease;
-    max-height: 90vh; /* Limita a altura máxima */
-    overflow-y: auto; /* Adiciona scroll se o conteúdo for maior */
+    max-height: 90vh; /* Limita altura */
+    overflow-y: auto; /* Adiciona scroll se necessário */
 }
 
 .modal--visible .modal__content {
-    transform: scale(1);
+    transform: scale(1); /* Animação de entrada */
 }
 
 .modal__header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem; /* Ajustado */
-    padding-bottom: 1.5rem; /* Ajustado */
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
     border-bottom: 1px solid var(--input-border);
 }
 
 .modal__title {
-    font-size: 2rem; /* Ajustado (era 1.25rem * 1.6) */
+    font-size: 2rem;
     font-weight: 600;
     margin: 0;
+    color: var(--text-color); /* Garante cor do texto do tema */
 }
 
 .modal__close-btn {
     background: none;
     border: none;
     color: var(--text-color-light);
-    font-size: 2.4rem; /* Ajustado (era 1.5rem * 1.6) */
+    font-size: 2.4rem;
     cursor: pointer;
     padding: 0;
     line-height: 1;
 }
-
-.modal__body {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem; /* Ajustado */
+.modal__close-btn:hover {
+    color: var(--text-color); /* Melhora feedback no hover */
 }
 
-/* --- ESTILOS DO FORMULÁRIO CORRIGIDOS AQUI --- */
+.modal__body {
+    /* Estilos para o corpo do modal, se necessário (ex: espaçamento padrão) */
+    /* Exemplo: display: flex; flex-direction: column; gap: 2rem; */
+    /* O conteúdo específico (formulário, texto) definirá seu próprio layout interno */
+}
 
-/* 1. Define a grelha de duas colunas */
+/* --- Estilos para Formulários DENTRO de Modais (Genéricos) --- */
+/* Estes estilos podem ser usados por qualquer formulário dentro de um modal */
+
 .modal-form__grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 2rem; /* Ajustado */
+    gap: 2rem;
 }
 
 .modal-form__input-group {
     display: flex;
     flex-direction: column;
-    gap: 0.8rem; /* Ajustado */
+    gap: 0.8rem;
+    margin-bottom: 1rem; /* Adicionado um pequeno espaço inferior */
 }
 
-/* 2. Modificador para campos de largura total */
 .modal-form__input-group--full {
-    grid-column: 1 / -1; /* Faz o campo ocupar as duas colunas */
+    grid-column: 1 / -1;
 }
 
 .modal-form__label {
     font-weight: 500;
     color: var(--text-color-light);
-    font-size: 1.4rem; /* Tamanho da label */
+    font-size: 1.4rem;
 }
 
 .modal-form__input,
 .modal-form__select {
     background-color: var(--bg-color);
     border: 1px solid var(--input-border);
-    border-radius: 1rem; /* Ajustado (era 10px) */
-    padding: 1.2rem 1.5rem; /* Ajustado (era 0.75rem, 1rem * 1.5) */
+    border-radius: 1rem;
+    padding: 1.2rem 1.5rem;
     color: var(--text-color);
-    font-size: 1.5rem; /* Ajustado */
+    font-size: 1.5rem;
     width: 100%;
     box-sizing: border-box;
 }
 
-/* O resto do ficheiro continua o mesmo */
+.modal-form__input:focus,
+.modal-form__select:focus {
+    outline: none;
+    border-color: var(--accent-green); /* Foco padrão verde */
+}
+
+/* Herda de base.css ou define aqui */
+.modal-form__error-message {
+    font-size: 1.2rem;
+    color: var(--accent-red);
+    min-height: 1.5rem;
+    margin-top: 0.4rem;
+}
+.modal-form__input.input-error,
+.modal-form__select.input-error {
+  border-color: var(--accent-red) !important;
+}
+
 .modal-form__actions {
     display: flex;
     justify-content: flex-end;
-    gap: 1.5rem; /* Ajustado */
-    margin-top: 2rem; /* Ajustado */
-    padding-top: 2rem; /* Ajustado */
+    gap: 1.5rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
     border-top: 1px solid var(--input-border);
 }
+
+/* Botões genéricos do formulário modal */
 .modal-form__button {
-    padding: 1.2rem 2.4rem; /* Ajustado (era 0.75rem, 1.5rem * 1.6) */
-    border-radius: 1rem; /* Ajustado (era 10px) */
+    padding: 1.2rem 2.4rem;
+    border-radius: 1rem;
     font-weight: 600;
     border: none;
     cursor: pointer;
-    font-size: 1.5rem; /* Ajustado */
+    font-size: 1.5rem;
+    transition: background-color 0.2s ease, transform 0.2s ease;
 }
+.modal-form__button:hover:not(:disabled) {
+    transform: translateY(-2px);
+}
+.modal-form__button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Estilos padrão para botões de Cancelar e Confirmar */
 .modal-form__button--cancel {
     background-color: var(--input-border);
     color: var(--text-color);
 }
+.modal-form__button--cancel:hover:not(:disabled) {
+    background-color: var(--accent-gray);
+    color: white;
+}
+
 .modal-form__button--confirm {
     background-color: var(--accent-green);
     color: white;
 }
-
-/* Mensagem de erro já estava ajustada em base.css */
-/* .modal-form__error-message { ... } */
-
-/* Estilos para preview de imagem dentro do modal (se usado) */
-.placa-form-page__image-preview-container {
-    /* Mantém os estilos do PlacaFormPage.css, mas ajusta se necessário */
-    height: 10rem; /* Ajustado (era 100px) */
-    margin-top: 1rem; /* Ajustado */
-    /* ... outros estilos ... */
+.modal-form__button--confirm:hover:not(:disabled) {
+     background-color: #1a9c4a; /* Verde mais escuro */
 }

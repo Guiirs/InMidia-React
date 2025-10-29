@@ -1,28 +1,13 @@
 /* src/components/ConfirmationModal/ConfirmationModal.css */
-.confirmation-modal-overlay { /* Renomeado para evitar conflito com classe antiga */
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(0, 0, 0, 0.7); display: flex;
-    justify-content: center; align-items: center; z-index: 2500;
-    backdrop-filter: blur(5px);
-    opacity: 0; visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-    padding: 1.5rem;
-    box-sizing: border-box;
-}
-.confirmation-modal-overlay--visible {
-    opacity: 1; visibility: visible;
+/* Importa ou assume que os estilos base de .modal, .modal__content, etc., já estão aplicados */
+
+/* Ajusta a largura máxima específica para este modal */
+.confirmation-modal-overlay .confirmation-modal-content { /* Seletor mais específico */
+    max-width: 400px;
+    text-align: center; /* Centraliza texto dentro deste modal específico */
 }
 
-.confirmation-modal-content { /* Renomeado */
-    background-color: var(--bg-secondary-color); padding: 3rem;
-    border-radius: var(--border-radius); text-align: center; max-width: 400px;
-    width: 100%; border: 1px solid var(--input-border); box-shadow: var(--box-shadow);
-    transform: scale(0.95); transition: transform 0.3s ease;
-}
- .confirmation-modal-overlay--visible .confirmation-modal-content {
-    transform: scale(1);
-}
-
+/* Título (se houver um - opcional, pode usar .modal__title) */
 .confirmation-modal-title {
     font-size: 1.8rem;
     font-weight: 600;
@@ -30,28 +15,61 @@
     color: var(--text-color);
 }
 
+/* Mensagem específica */
 .confirmation-modal-message {
-    font-size: 1.5rem; color: var(--text-color-light); /* Ajuste a cor se necessário */
-    margin: 0 0 2.5rem; line-height: 1.6;
+    font-size: 1.5rem;
+    color: var(--text-color-light); /* Pode ajustar se precisar de cor diferente */
+    margin: 0 0 2.5rem;
+    line-height: 1.6;
 }
-.confirmation-modal-actions { display: flex; justify-content: center; gap: 1.5rem; }
+
+/* Ações */
+.confirmation-modal-actions {
+    display: flex;
+    justify-content: center; /* Centraliza botões */
+    gap: 1.5rem;
+    /* Remove margem/padding/border-top se o modal base já tiver */
+}
+
+/* Botões - Herdam de .modal-form__button, mas sobrescrevem/adicionam cores */
 .confirmation-modal-button {
-    padding: 1rem 2rem; border: none;
-    border-radius: 0.8rem; cursor: pointer; font-weight: 600;
-    font-family: 'Poppins', sans-serif; transition: transform 0.2s ease, box-shadow 0.2s ease;
-    font-size: 1.4rem; min-width: 100px; /* Largura mínima */
+    /* Herda padding, border-radius, font-weight, font-size, transition de .modal-form__button */
+    min-width: 100px; /* Largura mínima específica */
 }
-.confirmation-modal-button:hover:not(:disabled) { transform: translateY(-2px); }
-.confirmation-modal-button--cancel { background-color: var(--input-border); color: var(--text-color); }
-.confirmation-modal-button--cancel:hover:not(:disabled) { box-shadow: 0 0.4rem 1rem rgba(0,0,0,0.2); background-color: var(--accent-gray); color: white; }
-.confirmation-modal-button--confirm { background-color: var(--accent-red); color: white; } /* Padrão Vermelho */
-.confirmation-modal-button--confirm:hover:not(:disabled) { box-shadow: 0 0.4rem 1.5rem rgba(244, 67, 54, 0.4); background-color: #d32f2f; }
 
-/* Estilo opcional para confirmação "verde" (ex: confirmar criação) */
-.confirmation-modal-button--confirm-green { background-color: var(--accent-green); color: white; }
-.confirmation-modal-button--confirm-green:hover:not(:disabled) { box-shadow: 0 0.4rem 1.5rem rgba(34, 197, 94, 0.4); background-color: #1a9c4a; }
+/* Botão Cancelar (pode herdar de .modal-form__button--cancel ou definir aqui) */
+.confirmation-modal-button--cancel {
+    background-color: var(--input-border);
+    color: var(--text-color);
+}
+.confirmation-modal-button--cancel:hover:not(:disabled) {
+    background-color: var(--accent-gray);
+    color: white;
+    box-shadow: 0 0.4rem 1rem rgba(0,0,0,0.2);
+}
 
- .confirmation-modal-button:disabled {
+/* Botão Confirmar (Vermelho - Padrão) */
+.confirmation-modal-button--confirm {
+    background-color: var(--accent-red);
+    color: white;
+}
+.confirmation-modal-button--confirm:hover:not(:disabled) {
+    background-color: #d32f2f; /* Vermelho mais escuro */
+    box-shadow: 0 0.4rem 1.5rem rgba(244, 67, 54, 0.4);
+}
+
+/* Botão Confirmar (Verde - Opcional) */
+.confirmation-modal-button--confirm-green {
+    background-color: var(--accent-green);
+    color: white;
+}
+.confirmation-modal-button--confirm-green:hover:not(:disabled) {
+    background-color: #1a9c4a; /* Verde mais escuro */
+    box-shadow: 0 0.4rem 1.5rem rgba(34, 197, 94, 0.4);
+}
+
+/* Estado desabilitado (pode herdar de .modal-form__button:disabled) */
+.confirmation-modal-button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }

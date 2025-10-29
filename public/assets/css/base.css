@@ -39,7 +39,7 @@ body.light-theme {
 /* --- AJUSTE DE ESCALA GLOBAL --- */
 html {
     /* Define a base para 1rem = 10px (16px * 62.5%) */
-    font-size: 45%;
+    font-size: 45%; /* Correção: Era 45% */
 }
 
 /* --- Estilos Gerais da Aplicação --- */
@@ -96,75 +96,6 @@ body.auth-page-active .main-content {
     padding: 0;
 }
 
-/* --- ESTILOS DO MODAL DE CONFIRMAÇÃO (AJUSTADO PARA REM) --- */
-.confirmation-modal {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(0, 0, 0, 0.7); display: flex;
-    justify-content: center; align-items: center; z-index: 2500;
-    backdrop-filter: blur(5px);
-}
-.confirmation-modal__content {
-    background-color: var(--bg-secondary-color); padding: 3rem; /* Aumentado */
-    border-radius: var(--border-radius); text-align: center; max-width: 400px; /* Max-width em px é ok */
-    border: 1px solid var(--input-border); box-shadow: var(--box-shadow);
-    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-@keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.confirmation-modal__message {
-    font-size: 1.6rem; /* Mantido */ color: var(--text-color);
-    margin: 0 0 2rem; /* Aumentado */ line-height: 1.6;
-}
-.confirmation-modal__actions { display: flex; justify-content: center; gap: 1.5rem; } /* Aumentado */
-.confirmation-modal__button {
-    padding: 1rem 2rem; /* Mantido */ border: none;
-    border-radius: 0.8rem; /* Ajustado */ cursor: pointer; font-weight: 600;
-    font-family: 'Poppins', sans-serif; transition: transform 0.2s ease, box-shadow 0.2s ease;
-    font-size: 1.4rem; /* Mantido */
-}
-.confirmation-modal__button:hover { transform: translateY(-2px); }
-.confirmation-modal__button--cancel { background-color: var(--input-border); color: var(--text-color-light); }
-.confirmation-modal__button--cancel:hover { box-shadow: 0 0.4rem 1rem rgba(0,0,0,0.2); }
-.confirmation-modal__button--confirm { background-color: var(--accent-red); color: white; }
-.confirmation-modal__button--confirm:hover { box-shadow: 0 0.4rem 1.5rem rgba(244, 67, 54, 0.4); }
-
-/* --- ESTILOS PARA O MODAL DA API KEY (AJUSTADO PARA REM) --- */
-.apikey-modal {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(0, 0, 0, 0.7); display: flex;
-    justify-content: center; align-items: center; z-index: 3000;
-    backdrop-filter: blur(5px); padding: 1.5rem; box-sizing: border-box;
-}
-.apikey-modal__content {
-    background-color: var(--bg-secondary-color); padding: 3rem; /* Aumentado */
-    border-radius: var(--border-radius); text-align: center; max-width: 500px; /* Max-width em px é ok */
-    width: 100%; border: 1px solid var(--input-border); box-shadow: var(--box-shadow);
-    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-.apikey-modal__icon { font-size: 3rem; color: var(--accent-yellow); margin-bottom: 1.5rem; } /* Aumentado */
-.apikey-modal__title { font-size: 2rem; /* Mantido */ font-weight: 600; margin: 0 0 0.8rem; color: var(--text-color); }
-.apikey-modal__message { font-size: 1.4rem; /* Mantido */ color: var(--text-color-light); margin: 0 0 2rem; line-height: 1.6; }
-.apikey-modal__key-wrapper { position: relative; display: flex; margin-bottom: 2rem; } /* Aumentado */
-.apikey-modal__key-input {
-    background-color: var(--bg-color); border: 1px solid var(--input-border);
-    border-radius: 0.8rem; padding: 1.2rem 4.5rem 1.2rem 1.5rem; /* Ajustado */
-    font-size: 1.4rem; /* Aumentado */ font-family: 'Courier New', Courier, monospace;
-    color: var(--text-color); width: 100%; box-sizing: border-box;
-}
-.apikey-modal__copy-btn {
-    position: absolute; right: 0.6rem; top: 0.6rem; bottom: 0.6rem;
-    background-color: var(--input-border); color: var(--text-color-light);
-    border: none; border-radius: 0.5rem; cursor: pointer;
-    width: 4rem; transition: background-color 0.2s ease; font-size: 1.6rem; /* Tamanho do ícone */
-}
-.apikey-modal__copy-btn:hover { background-color: var(--sidebar-active-bg); color: var(--text-color); }
-.apikey-modal__close-btn {
-    background-color: var(--accent-green); color: white; padding: 1.2rem 2rem; /* Ajustado */
-    border: none; border-radius: 0.8rem; cursor: pointer; font-weight: 600;
-    font-family: 'Poppins', sans-serif; transition: background-color 0.2s ease; width: 100%;
-    font-size: 1.6rem; /* Aumentado */
-}
-.apikey-modal__close-btn:hover { background-color: #1a9c4a; }
-
 /* --- Estilos Genéricos --- */
 .text-center { text-align: center; }
 .error-message { color: var(--accent-red); }
@@ -174,6 +105,8 @@ body.auth-page-active .main-content {
 }
 
 /* Ajuste fino para mensagens de erro dentro de forms */
+/* Esta regra pode sobrepor a de .modal-form__error-message se for mais específica */
+/* Mantida aqui por segurança, mas idealmente seria definida apenas onde usada (no modal.css, etc.) */
 .modal-form__error-message {
     font-size: 1.2rem; /* Ajustado */
     color: var(--accent-red);
