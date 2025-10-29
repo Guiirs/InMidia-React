@@ -1,29 +1,23 @@
 // src/App.jsx
-import React, { Suspense, lazy } from 'react'; // 1. Importar Suspense e lazy
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-// 2. Componentes de Rota/Globais (Não devem ser lazy-loaded)
+// Componentes de Rota/Globais
 import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute';
 import AdminRoute from './components/AdminRoute/AdminRoute.jsx';
 import ToastNotification from './components/ToastNotification/ToastNotification';
-import Spinner from './components/Spinner/Spinner'; // Para o fallback
+import Spinner from './components/Spinner/Spinner';
 
-// 3. Componente de Fallback (Spinner em tela cheia)
-// Mostrado enquanto o próximo "chunk" (página) está a ser baixado
+// Componente de Fallback
 const FullPageSpinner = () => (
-  <div style={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      height: '100vh', 
-      backgroundColor: 'var(--bg-color)' // Usa a cor de fundo do tema
-    }}>
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-color)' }}>
     <Spinner message="A carregar página..." />
   </div>
 );
 
-// 4. Lazy-load (Carregamento dinâmico) de todas as Páginas e o Layout Principal
+// Lazy-load (Carregamento dinâmico) de todas as Páginas e o Layout
 const MainLayout = lazy(() => import('./layouts/MainLayout/MainLayout'));
+const ApiStatusPage = lazy(() => import('./pages/ApiStatus/ApiStatusPage'));
 const LoginPage = lazy(() => import('./pages/Login/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/Dashboard/DashboardPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFound/NotFoundPage'));
@@ -43,10 +37,16 @@ const ForgotPasswordPage = lazy(() => import('./pages/ForgotPassword/ForgotPassw
 function App() {
   return (
     <> 
-      {/* 5. Envolve <Routes> com <Suspense> */}
       <Suspense fallback={<FullPageSpinner />}>
         <Routes>
-          {/* === ROTAS PÚBLICAS === */}
+          {/* === ROTA PÚBLICA NA RAIZ (AGORA REDIRECIONA) === */}
+          {/* Redireciona a raiz / para a página de status */}
+          <Route path="/" element={<Navigate to="/status" replace />} /> 
+
+          {/* === ROTA PÚBLICA DE STATUS (NOVO CAMINHO) === */}
+          <Route path="/status" element={<ApiStatusPage />} />
+
+          {/* === OUTRAS ROTAS PÚBLICAS === */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/empresa-register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -69,8 +69,9 @@ function App() {
               <Route element={<AdminRoute />}>
                  <Route path="/admin-users" element={<AdminUsersPage />} />
               </Route>
+              
+              {/* O redirect da raiz (/) foi removido daqui */}
 
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
             </Route> {/* Fim do MainLayout */}
           </Route> {/* Fim do ProtectedRoute */}
 
@@ -79,7 +80,6 @@ function App() {
         </Routes>
       </Suspense>
 
-      {/* ToastNotification fica fora do Suspense */}
       <ToastNotification />
     </>
   );
