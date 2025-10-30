@@ -1,9 +1,11 @@
 // src/pages/Relatorios/RelatoriosPage.jsx
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+// Importa useQuery e useMutation
+import { useQuery, useMutation } from '@tanstack/react-query'; 
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
-import { fetchRelatorioOcupacao } from '../../services/api';
+// Importa a nova função de download
+import { fetchRelatorioOcupacao, downloadRelatorioOcupacaoPDF } from '../../services/api'; 
 import { useToast } from '../../components/ToastNotification/ToastNotification';
 import Spinner from '../../components/Spinner/Spinner';
 import { generateColors } from '../../utils/charts';
@@ -38,13 +40,13 @@ function RelatoriosPage() {
   // Estado para "submeter" as datas para a query
   const [submittedRange, setSubmittedRange] = useState(null);
 
-  // 1. useQuery para buscar dados
+  // 1. useQuery para buscar dados (JSON)
   const {
       data: reportData, // Dados da API (baseado no JSON que propusemos)
       isLoading,
       isError,
       error,
-      isFetching, // Usar isFetching para o loading do botão
+      isFetching, // Usar isFetching para o loading do botão "Gerar Relatório"
       refetch // Função para re-buscar dados
   } = useQuery({
       queryKey: ['relatorioOcupacao', submittedRange], // Depende das datas submetidas
@@ -59,11 +61,35 @@ function RelatoriosPage() {
       },
       onSuccess: (data) => {
           if (!data) return;
-          if (data.summary.totalAlugueisNoPeriodo === 0) {
+          // Corrigido: Acessando a propriedade aninhada
+          if (data.totalAlugueisNoPeriodo === 0) {
               showToast('Nenhum dado encontrado para o período selecionado.', 'info');
           }
       }
   });
+  
+  // [NOVO - CORREÇÃO PDF] Adiciona useMutation para o download
+  const downloadPdfMutation = useMutation({
+    mutationFn: (dates) => downloadRelatorioOcupacaoPDF(dates.inicio, dates.fim),
+    onSuccess: (data) => {
+      // 'data' é o retorno { blob, filename } da nossa função api.js
+      const url = URL.createObjectURL(data.blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', data.filename);
+      document.body.appendChild(link);
+      link.click();
+      
+      // Limpeza
+      link.remove();
+      URL.revokeObjectURL(url);
+      showToast('Download do PDF iniciado!', 'success');
+    },
+    onError: (err) => {
+      showToast(err.message || 'Falha ao gerar o PDF.', 'error');
+    }
+  });
+
 
   // Handlers dos filtros
   const handleDateChange = (e) => {
@@ -71,6 +97,7 @@ function RelatoriosPage() {
       setDateRange(prev => ({ ...prev, [name]: value }));
   };
 
+  // Handler do botão "Gerar Relatório" (busca JSON)
   const handleSubmitReport = () => {
       if (!dateRange.inicio || !dateRange.fim) {
           showToast("Por favor, selecione data de início e fim.", "warning");
@@ -88,6 +115,22 @@ function RelatoriosPage() {
       setTimeout(() => {
           refetch();
       }, 0);
+  };
+  
+  // [NOVO - CORREÇÃO PDF] Handler para o botão de download
+  const handleDownloadPDF = () => {
+      if (!submittedRange || !reportData) {
+          showToast("Primeiro, gere o relatório na tela.", "warning");
+          return;
+      }
+      // Corrigido: Acessando a propriedade aninhada
+      if (reportData.totalAlugueisNoPeriodo === 0) {
+          showToast("Não há dados para exportar em PDF.", "info");
+          return;
+      }
+      
+      // Chama a mutação de download
+      downloadPdfMutation.mutate(submittedRange);
   };
 
   // 2. useMemo para processar os dados para os gráficos
@@ -170,7 +213,8 @@ function RelatoriosPage() {
          </div>
        );
     }
-    if (reportData.summary.totalAlugueisNoPeriodo === 0) {
+    // Corrigido: Acessando a propriedade aninhada
+    if (reportData.totalAlugueisNoPeriodo === 0) {
         return (
          <div className="relatorios-page__full-width-container">
             <p>Nenhum dado de aluguel encontrado para o período selecionado.</p>
@@ -186,21 +230,24 @@ function RelatoriosPage() {
            <div className="summary-card">
               <div className="summary-card__icon summary-card__icon--total"><i className="fas fa-calendar-check"></i></div>
               <div className="summary-card__info">
-                <p className="summary-card__value">{reportData.summary.totalAlugueisNoPeriodo}</p>
+                {/* Corrigido: Acessando a propriedade aninhada */}
+                <p className="summary-card__value">{reportData.totalAlugueisNoPeriodo}</p>
                 <span className="summary-card__label">Aluguéis no Período</span>
               </div>
             </div>
             <div className="summary-card">
               <div className="summary-card__icon summary-card__icon--disponivel"><i className="fas fa-chart-line"></i></div>
               <div className="summary-card__info">
-                <p className="summary-card__value">{reportData.summary.taxaOcupacaoMediaGeral.toFixed(1)}%</p>
+                {/* Corrigido: Acessando a propriedade aninhada */}
+                <p className="summary-card__value">{reportData.percentagem.toFixed(1)}%</p>
                 <span className="summary-card__label">Ocupação Média</span>
               </div>
             </div>
             <div className="summary-card">
               <div className="summary-card__icon summary-card__icon--regiao"><i className="fas fa-bed"></i></div>
               <div className="summary-card__info">
-                <p className="summary-card__value">{reportData.summary.totalDiasAlugados}</p>
+                {/* Corrigido: Acessando a propriedade aninhada */}
+                <p className="summary-card__value">{reportData.totalDiasAlugados}</p>
                 <span className="summary-card__label">Total de Dias Alugados</span>
               </div>
             </div>
@@ -240,7 +287,7 @@ function RelatoriosPage() {
                     className="relatorios-page__date-input"
                     value={dateRange.inicio}
                     onChange={handleDateChange}
-                    disabled={isFetching}
+                    disabled={isFetching || downloadPdfMutation.isPending} // Desabilita durante download
                 />
             </div>
             <div className="relatorios-page__filter-group">
@@ -252,15 +299,26 @@ function RelatoriosPage() {
                     className="relatorios-page__date-input"
                     value={dateRange.fim}
                     onChange={handleDateChange}
-                    disabled={isFetching}
+                    disabled={isFetching || downloadPdfMutation.isPending} // Desabilita durante download
                 />
             </div>
             <button 
                 className="relatorios-page__submit-button" 
                 onClick={handleSubmitReport}
-                disabled={isFetching}
+                disabled={isFetching || downloadPdfMutation.isPending} // Desabilita durante download
             >
                 {isFetching ? 'A gerar...' : 'Gerar Relatório'}
+            </button>
+            
+            {/* [NOVO - CORREÇÃO PDF] Botão de Download */}
+            <button 
+                className="relatorios-page__submit-button" // Pode usar o mesmo estilo
+                style={{ backgroundColor: 'var(--accent-red)' }} // Cor diferente
+                onClick={handleDownloadPDF}
+                disabled={!submittedRange || !reportData || downloadPdfMutation.isPending || isFetching}
+                title={!submittedRange ? "Gere um relatório primeiro" : "Exportar PDF"}
+            >
+                {downloadPdfMutation.isPending ? 'A exportar...' : 'Exportar PDF'}
             </button>
         </div>
 

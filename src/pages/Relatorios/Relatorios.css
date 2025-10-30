@@ -1,23 +1,18 @@
-/* --- Estilos da Página de Relatórios com BEM --- */
+/* --- Estilos da Página de Relatórios com BEM (REFINADO) --- */
 
 /* Bloco Principal */
 .relatorios-page {
-    display: grid;
-    /* Define o layout em linhas: controles, (sumário), (gráficos) */
-    grid-template-columns: 1fr 1fr;
+    display: flex; 
+    flex-direction: column;
     gap: 3rem;
-    /* Faz com que os controles ocupem a largura total */
-    grid-template-areas:
-        "controls controls"
-        "content content";
+    width: 100%;
 }
 
-/* --- NOVOS ESTILOS: Controles de Data --- */
+/* --- 1. Controles de Data e Botão Gerar --- */
 .relatorios-page__controls {
-    grid-area: controls; /* Ocupa a área definida no grid */
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end; /* Alinha labels e inputs */
+    align-items: flex-end;
     gap: 2rem;
     background-color: var(--bg-secondary-color);
     padding: 2.4rem;
@@ -46,16 +41,9 @@
     color: var(--text-color);
     font-family: 'Poppins', sans-serif;
     font-size: 1.5rem;
-    width: 20rem; /* Largura fixa para date pickers */
+    width: 20rem; 
     box-sizing: border-box;
 }
-/* Estilização do ícone do calendário (pode variar por browser) */
-.relatorios-page__date-input::-webkit-calendar-picker-indicator {
-    filter: invert(var(--invert-icon, 0)); /* Inverte o ícone no tema escuro se precisar */
-}
-:root { --invert-icon: 1; }
-body.light-theme { --invert-icon: 0; }
-
 
 .relatorios-page__submit-button {
     background-color: var(--accent-green);
@@ -67,7 +55,10 @@ body.light-theme { --invert-icon: 0; }
     cursor: pointer;
     font-size: 1.5rem;
     transition: background-color 0.3s ease;
-    height: 4.9rem; /* Alinha altura com os inputs */
+    height: 4.9rem; /* Alinhamento vertical com o input */
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
 }
 .relatorios-page__submit-button:hover:not(:disabled) {
     background-color: #1a9c4a;
@@ -77,28 +68,97 @@ body.light-theme { --invert-icon: 0; }
     cursor: not-allowed;
 }
 
-/* --- NOVOS ESTILOS: Summary Cards (copiado do Dashboard.css) --- */
+
+/* --- 2. Container de Relatório e Cards de Resumo --- */
+
+/* Wrapper que contém os cards e gráficos */
+.relatorios-page__charts-grid-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+}
+
+/* Título Grande do Relatório */
+.relatorios-page__report-title {
+    /* Estilo definido inline no JSX para garantir a fonte H2/H3 */
+    margin: 0;
+}
+
 .relatorios-page__summary {
-    grid-column: 1 / -1; /* Ocupa a largura total */
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Mais flexível */
+    gap: 2rem;
+    padding-bottom: 0;
+}
+
+/* [NOVO ESTILO CARD] Reutilizado de Dashboard.css, mas garantido aqui para o tema Ocupação */
+.summary-card {
+    background-color: var(--bg-secondary-color);
+    border-radius: var(--border-radius);
+    padding: 2.4rem; 
+    display: flex;
+    flex-direction: column; /* Novo: Layout vertical para o relatório */
+    gap: 1.5rem;
+    border: 1px solid var(--input-border);
+    text-align: left;
+}
+
+.summary-card__icon-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.summary-card__icon {
+    width: 4rem; 
+    height: 4rem; 
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem; 
+    color: #fff;
+    flex-shrink: 0;
+}
+/* Cores para os cards de Ocupação */
+.summary-card__icon--total { background-color: var(--accent-pink); } /* Aluguéis */
+.summary-card__icon--disponivel { background-color: var(--accent-green); } /* Taxa */
+.summary-card__icon--regiao { background-color: var(--accent-yellow); } /* Dias Alugados */
+/* Nova cor para o 4º Card */
+.summary-card__icon-4 { background-color: #2F80ED; } /* Dias Máx */
+
+
+.summary-card__value {
+    font-size: 3.2rem; 
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0;
+    line-height: 1;
+}
+
+.summary-card__label {
+    font-size: 1.4rem; 
+    color: var(--text-color-light);
+    margin-top: 0.5rem;
+}
+
+
+/* --- 3. Gráficos Detalhados --- */
+.relatorios-page__charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 2rem;
 }
 
-/* (Estilos .summary-card, .summary-card__icon, etc. 
-   Assume-se que estão definidos globalmente ou em Dashboard.css 
-   Se não, copie-os de Dashboard.css para aqui) 
-*/
-
-
-/* --- Conteúdo (Gráficos ou Mensagens) --- */
 .relatorios-page__chart-container {
     background-color: var(--bg-secondary-color);
     padding: 2.4rem;
     border-radius: var(--border-radius);
     border: 1px solid var(--input-border);
     box-shadow: var(--box-shadow);
-    /* Ocupa 1 coluna por padrão (grid 1fr 1fr) */
+    /* Garante que a barra horizontal tenha espaço */
+    height: 45rem; 
 }
 
 .relatorios-page__chart-title {
@@ -107,16 +167,49 @@ body.light-theme { --invert-icon: 0; }
     font-size: 1.8rem;
     font-weight: 600;
     color: var(--text-color);
+    text-align: center; 
+    border-bottom: 1px solid var(--input-border); /* Separador sutil */
+    padding-bottom: 1rem;
 }
 
-.relatorios-page__chart-canvas {
-    width: 100% !important;
-    height: 350px !important;
+.relatorios-page__no-chart-data {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-color-light);
+    font-style: italic;
+    font-size: 1.4rem;
 }
 
-/* Modificador para ocupar a largura total (para Spinner ou mensagens) */
+
+/* --- 4. Exportação PDF (Controles) --- */
+
+/* Novo container para o botão PDF, alinhado à direita */
+.relatorios-page__controls--pdf {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 0;
+    padding-bottom: 0;
+    background: none;
+    border: none;
+    /* Adicionado margem para separação */
+    margin-bottom: 2rem; 
+}
+
+.relatorios-page__submit-button--pdf {
+    background-color: var(--accent-red);
+    color: white;
+    padding: 1.2rem 2.4rem;
+    height: auto; /* Permite altura flexível */
+    box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+}
+.relatorios-page__submit-button--pdf:hover:not(:disabled) {
+    background-color: #d32f2f;
+}
+
+
+/* --- 5. Mensagens de Conteúdo --- */
 .relatorios-page__full-width-container {
-    grid-column: 1 / -1;
+    /* Estilos para Spinner e mensagens de erro/inicial */
     background-color: var(--bg-secondary-color);
     padding: 2.4rem;
     border-radius: var(--border-radius);
@@ -126,37 +219,26 @@ body.light-theme { --invert-icon: 0; }
     display: flex;
     align-items: center;
     justify-content: center;
-}
-.relatorios-page__full-width-container p {
-    font-size: 1.6rem;
-    color: var(--text-color-light);
+    flex-direction: column;
 }
 
 
-/* Responsividade */
+/* --- Responsividade --- */
 @media (max-width: 992px) {
-    .relatorios-page {
-        grid-template-columns: 1fr; /* Coluna única */
-        grid-template-areas:
-            "controls"
-            "content";
+    .relatorios-page__charts-grid {
+        grid-template-columns: 1fr; /* Coluna única para gráficos */
     }
-    
-    /* Faz os gráficos ficarem em coluna única também */
     .relatorios-page__chart-container {
-        grid-column: 1 / -1;
+        height: auto; /* Altura automática para evitar cortes */
     }
 }
 
 @media (max-width: 576px) {
-    .relatorios-page__controls {
-        flex-direction: column; /* Empilha os filtros */
-        align-items: stretch; /* Alarga os inputs/botões */
+    .relatorios-page__controls--main {
+        flex-direction: column; 
+        align-items: stretch; 
     }
     .relatorios-page__date-input {
-        width: 100%; /* Largura total */
-    }
-    .relatorios-page__submit-button {
-        height: auto; /* Altura automática */
+        width: 100%; 
     }
 }

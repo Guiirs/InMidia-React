@@ -60,6 +60,28 @@ apiClient.interceptors.response.use(
         }
         return Promise.reject(new Error('Sessão expirada. Faça login novamente.'));
       }
+      
+      // [CORREÇÃO PDF] Se a resposta de erro for um blob, tenta decodificar
+      if (data instanceof Blob && data.type === "application/json") {
+          return new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                  try {
+                      const errorData = JSON.parse(reader.result);
+                      const errorMessage = errorData?.message || 'Erro ao processar o arquivo.';
+                      if (import.meta.env.DEV) console.error(`[API Interceptor Res] Erro ${status} (Blob):`, errorData);
+                      reject(new Error(errorMessage));
+                  } catch (e) {
+                      reject(new Error('Erro indefinido do servidor (Blob).'));
+                  }
+              };
+              reader.onerror = () => {
+                  reject(new Error('Erro ao ler a resposta de erro (Blob).'));
+              };
+              reader.readAsText(data);
+          });
+      }
+      // --- Fim da correção PDF ---
 
       const errorMessage = data?.message || error.message || `Erro ${status}`;
       return Promise.reject(new Error(errorMessage));
@@ -394,7 +416,6 @@ export const fetchDashboardSummary = async () => {
     }
 };
 
-// <<< NOVO: Função para o relatório de ocupação por período >>>
 /**
  * Busca o relatório de ocupação por período.
  * @param {string} data_inicio - Data de início (YYYY-MM-DD)
@@ -408,6 +429,50 @@ export const fetchRelatorioOcupacao = async (data_inicio, data_fim) => {
         return response.data;
     } catch (error) {
         if (import.meta.env.DEV) console.error('[API fetchRelatorioOcupacao] Erro:', error);
+        throw error;
+    }
+};
+
+/**
+ * [NOVA FUNÇÃO - CORREÇÃO PDF]
+ * Solicita o download do relatório de ocupação em PDF.
+ * @param {string} data_inicio - Data de início (YYYY-MM-DD)
+ * @param {string} data_fim - Data de fim (YYYY-MM-DD)
+ * @returns {Promise<{blob: Blob, filename: string}>} - O arquivo PDF como um Blob e o nome do arquivo.
+ */
+export const downloadRelatorioOcupacaoPDF = async (data_inicio, data_fim) => {
+    try {
+        const params = new URLSearchParams({ data_inicio, data_fim });
+        
+        // A chave é 'responseType: blob' para que o Axios trate a resposta como um arquivo
+        const response = await apiClient.get(
+            `/relatorios/export/ocupacao-por-periodo?${params.toString()}`,
+            {
+                responseType: 'blob' 
+            }
+        );
+        
+        // Retorna o blob e o nome do arquivo (se o backend enviar)
+        return {
+            blob: response.data,
+            // Tenta extrair o nome do arquivo do header Content-Disposition
+            filename: response.headers['content-disposition']
+                ?.split('filename=')[1]
+                ?.replace(/"/g, '') || 'relatorio_ocupacao.pdf'
+        };
+
+    } catch (error) {
+        // Se o erro for um blob, significa que a API retornou um erro JSON
+        // (que o axios tentou ler como blob). Precisamos convertê-lo.
+        if (error.response && error.response.data instanceof Blob) {
+             try {
+                const errorJson = JSON.parse(await error.response.data.text());
+                throw new Error(errorJson.message || 'Erro ao gerar PDF');
+             } catch(e) {
+                throw error; // Lança o erro original se a conversão falhar
+             }
+        }
+        if (import.meta.env.DEV) console.error('[API downloadRelatorioOcupacaoPDF] Erro:', error);
         throw error;
     }
 };
