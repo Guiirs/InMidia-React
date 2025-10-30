@@ -2,17 +2,31 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-// O componente recebe os utilizadores e as funções de callback como props
-function UserTable({ users, loggedInUserId, onRoleChange, onDeleteClick }) {
+// <<< ALTERAÇÃO: Aceita 'isUpdatingRole' e 'isDeleting' como props >>>
+function UserTable({
+    users,
+    loggedInUserId,
+    onRoleChange,
+    onDeleteClick,
+    isUpdatingRole, // boolean
+    isDeleting      // boolean
+}) {
 
     // Renderiza as linhas da tabela
     return (
         <tbody>
             {users.map(user => {
-                // Verifica se esta linha corresponde ao utilizador logado
                 const isCurrentUser = loggedInUserId && String(user._id) === String(loggedInUserId);
-                const disableActions = isCurrentUser;
-                const disableReason = isCurrentUser ? "Não pode alterar/apagar a sua própria conta aqui" : "";
+                
+                // <<< MELHORIA: Desabilita ações se for o user atual OU se outra ação estiver em curso >>>
+                const disableActions = isCurrentUser || isUpdatingRole || isDeleting;
+                
+                let disableReason = "";
+                if (isCurrentUser) {
+                    disableReason = "Não pode alterar/apagar a sua própria conta aqui";
+                } else if (isUpdatingRole || isDeleting) {
+                    disableReason = "Aguarde, outra ação está em progresso...";
+                }
 
                 return (
                     <tr key={user._id}>
@@ -21,26 +35,30 @@ function UserTable({ users, loggedInUserId, onRoleChange, onDeleteClick }) {
                         <td>{user.email}</td>
                         <td>
                             <select
-                                className="admin-users-page__role-select" // Mantém a classe original para estilos
+                                className="admin-users-page__role-select"
                                 value={user.role}
-                                onChange={(e) => onRoleChange(user._id, e.target.value, e.target)} // Chama o callback
-                                disabled={disableActions}
+                                onChange={(e) => onRoleChange(user._id, e.target.value, e.target)}
+                                disabled={disableActions} // Usa a nova lógica
                                 title={disableReason}
                             >
                                 <option value="user">Utilizador</option>
                                 <option value="admin">Admin</option>
                             </select>
                         </td>
-                        <td className="admin-users-page__actions"> {/* Mantém a classe original para estilos */}
+                        <td className="admin-users-page__actions">
                             <button
-                                className="admin-users-page__action-button admin-users-page__action-button--delete" // Mantém a classe original para estilos
+                                className="admin-users-page__action-button admin-users-page__action-button--delete"
                                 title={disableReason || "Apagar"}
-                                onClick={() => onDeleteClick(user)} // Chama o callback
-                                disabled={disableActions}
+                                onClick={() => onDeleteClick(user)}
+                                disabled={disableActions} // Usa a nova lógica
                             >
+                                {/* O spinner individual por linha foi movido
+                                  para a página AdminUsersPage (na mutação de delete),
+                                  mas podemos adicionar um genérico aqui se preferir.
+                                  Por agora, apenas desabilitamos.
+                                */}
                                 <i className="fas fa-trash"></i>
                             </button>
-                            {/* Poderia adicionar um botão de editar aqui se necessário no futuro */}
                         </td>
                     </tr>
                 );
@@ -56,9 +74,19 @@ UserTable.propTypes = {
         email: PropTypes.string.isRequired,
         role: PropTypes.string.isRequired,
     })).isRequired,
-    loggedInUserId: PropTypes.string, // ID do utilizador logado para desativar ações
-    onRoleChange: PropTypes.func.isRequired, // Função para lidar com a mudança de role
-    onDeleteClick: PropTypes.func.isRequired, // Função para lidar com o clique em apagar
+    loggedInUserId: PropTypes.string,
+    onRoleChange: PropTypes.func.isRequired,
+    onDeleteClick: PropTypes.func.isRequired,
+    // <<< ALTERAÇÃO: Adiciona validação das novas props >>>
+    isUpdatingRole: PropTypes.bool,
+    isDeleting: PropTypes.bool,
 };
+
+// Define valores padrão
+UserTable.defaultProps = {
+    isUpdatingRole: false,
+    isDeleting: false
+};
+
 
 export default UserTable;

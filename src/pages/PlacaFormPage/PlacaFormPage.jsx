@@ -1,11 +1,9 @@
 // src/pages/PlacaFormPage/PlacaFormPage.jsx (Refatorado com RHF e React Query)
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-// 1. Importar hooks do React Query
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-// 2. Importar API diretamente
 import { fetchPlacaById, addPlaca, updatePlaca, fetchRegioes } from '../../services/api';
 import { useToast } from '../../components/ToastNotification/ToastNotification';
 import Spinner from '../../components/Spinner/Spinner';
@@ -19,13 +17,11 @@ function PlacaFormPage() {
 
   const [imagePreview, setImagePreview] = useState(null);
   const [initialImageUrl, setInitialImageUrl] = useState(null);
-  // --- REMOVIDO ESTADO MANUAL DE LOADING ---
-  // const [isLoadingPage, setIsLoadingPage] = useState(isEditMode); 
 
   const showToast = useToast();
   const queryClient = useQueryClient();
 
-  // --- RHF Config (inalterado) ---
+  // --- RHF Config ---
   const {
     register,
     handleSubmit,
@@ -33,7 +29,7 @@ function PlacaFormPage() {
     watch,
     setValue,
     setError: setFormError,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm({
     mode: 'onBlur',
     defaultValues: {
@@ -42,7 +38,7 @@ function PlacaFormPage() {
     }
   });
 
-  // --- useQuery para Regiões (inalterado) ---
+  // --- useQuery para Regiões ---
   const { data: regioes = [], isLoading: isLoadingRegioes, isError: isErrorRegioes } = useQuery({
       queryKey: ['regioes'],
       queryFn: fetchRegioes,
@@ -50,44 +46,56 @@ function PlacaFormPage() {
       placeholderData: [],
   });
 
-  // --- useQuery para Placa (MODIFICADO) ---
-  // 1. Adicionado 'isLoading: isLoadingPlaca' para obter o estado de loading da query
+  // --- useQuery para Placa (Modo Edição) ---
   const { data: placaData, isLoading: isLoadingPlaca } = useQuery({
       queryKey: ['placa', placaId],
       queryFn: () => fetchPlacaById(placaId),
-      enabled: isEditMode,
+      enabled: isEditMode, // Só busca se for modo de edição
       staleTime: 1000 * 60 * 5,
-      onSuccess: (placa) => {
-          // Quando os dados chegarem, preenche o formulário
-          const currentImageUrl = placa.imagem ? getImageUrl(placa.imagem, null) : null;
-          reset({
-            numero_placa: placa.numero_placa || '',
-            nomeDaRua: placa.nomeDaRua || '',
-            coordenadas: placa.coordenadas || '',
-            tamanho: placa.tamanho || '',
-            regiao: placa.regiao?._id || placa.regiao || '',
-            imagem: null,
-          });
-          setImagePreview(currentImageUrl);
-          setInitialImageUrl(currentImageUrl);
-          // --- REMOVIDO ---
-          // setIsLoadingPage(false); 
-      },
       onError: (err) => {
           showToast(err.message || 'Erro ao carregar dados da placa.', 'error');
           navigate('/placas');
-          // (Não precisamos definir loading false aqui, a navegação trata disso)
       }
   });
 
-  // --- REMOVIDO useEffect que dependia de isLoadingPage ---
-  // useEffect(() => {
-  //   if (!isEditMode) {
-  //     setIsLoadingPage(false);
-  //   }
-  // }, [isEditMode]);
+  // useEffect para preencher o formulário
+  useEffect(() => {
+    if (isEditMode && placaData) {
+      
+      // *** 🐞 CORREÇÃO APLICADA AQUI ***
+      // Define um placeholder válido
+      const placeholderImg = '/assets/img/placeholder.png'; 
+      
+      // Se a placa tiver imagem, chama getImageUrl (passando o placeholder válido).
+      // Se não tiver imagem, define currentImageUrl como null.
+      const currentImageUrl = placaData.imagem 
+          ? getImageUrl(placaData.imagem, placeholderImg) 
+          : null;
 
-  // Observa o campo 'imagem' (inalterado)
+      reset({
+        numero_placa: placaData.numero_placa || '',
+        nomeDaRua: placaData.nomeDaRua || '',
+        coordenadas: placaData.coordenadas || '',
+        tamanho: placaData.tamanho || '',
+        regiao: placaData.regiao?._id || placaData.regiao || '',
+        imagem: null,
+      });
+      setImagePreview(currentImageUrl);
+      setInitialImageUrl(currentImageUrl);
+    }
+    // Se não for modo de edição, garante que o formulário esteja limpo
+    if (!isEditMode) {
+        reset({
+            numero_placa: '', nomeDaRua: '', coordenadas: '',
+            tamanho: '', regiao: '', imagem: null
+        });
+        setImagePreview(null);
+        setInitialImageUrl(null);
+    }
+  }, [isEditMode, placaData, reset]); // Depende dos dados da query e do modo
+
+  
+  // Observa o campo 'imagem' 
   const imagemField = watch('imagem');
   useEffect(() => {
     if (imagemField && imagemField[0] instanceof File) {
@@ -102,7 +110,7 @@ function PlacaFormPage() {
     }
   }, [imagemField, initialImageUrl]);
 
-  // --- Mutações (inalteradas) ---
+  // --- Mutações (Criar/Atualizar) ---
   const createPlacaMutation = useMutation({
     mutationFn: addPlaca,
     onSuccess: () => {
@@ -123,8 +131,8 @@ function PlacaFormPage() {
     mutationFn: (variables) => updatePlaca(variables.id, variables.formData),
     onSuccess: () => {
       showToast('Placa atualizada com sucesso!', 'success');
-      queryClient.invalidateQueries({ queryKey: ['placas'] });
-      queryClient.invalidateQueries({ queryKey: ['placa', placaId] });
+      queryClient.invalidateQueries({ queryKey: ['placas'] }); 
+      queryClient.invalidateQueries({ queryKey: ['placa', placaId] }); 
       navigate('/placas');
     },
     onError: (error) => {
@@ -138,10 +146,10 @@ function PlacaFormPage() {
   const isFormSubmitting = createPlacaMutation.isPending || updatePlacaMutation.isPending;
 
 
-  // --- Handlers (inalterados) ---
+  // --- Handlers ---
   const handleRemoveImage = () => {
     setValue('imagem', null, { shouldValidate: false, shouldDirty: true });
-    setImagePreview(null);
+    setImagePreview(null); 
     showToast('Imagem removida. Guarde para confirmar.', 'info');
   };
 
@@ -157,7 +165,7 @@ function PlacaFormPage() {
     if (imageFile instanceof File) {
       dataToSend.append('imagem', imageFile);
     } else if (isEditMode && !imagePreview && initialImageUrl) {
-      dataToSend.append('imagem', '');
+      dataToSend.append('imagem', ''); 
     }
 
     if (isEditMode) {
@@ -167,15 +175,13 @@ function PlacaFormPage() {
     }
   };
 
-  // --- Renderização (MODIFICADA) ---
-  // 2. Condição do Spinner atualizada para usar os 'isLoading' do React Query
+  // --- Renderização ---
   if ((isEditMode && isLoadingPlaca) || isLoadingRegioes) {
     return <Spinner message={isEditMode ? "A carregar dados da placa..." : "A carregar formulário..."} />;
   }
   if (isErrorRegioes) {
        return <div className="placa-form-page"><p className="error-message">Erro ao carregar regiões. Não é possível continuar.</p></div>;
   }
-  // (Se isLoadingPlaca for true, o spinner acima já tratou. Se houver erro na placa, o onError já navegou para fora)
 
   return (
     <div className="placa-form-page">
@@ -246,7 +252,7 @@ function PlacaFormPage() {
                 <span id="image-preview-text">Nenhuma imagem selecionada</span>
               )}
               {imagePreview && (
-                <button typeT="button" id="remove-image-button"
+                <button type="button" id="remove-image-button"
                         className="placa-form-page__remove-image-button"
                         onClick={handleRemoveImage} disabled={isFormSubmitting} >
                   <i className="fas fa-trash"></i> Remover Imagem

@@ -1,10 +1,9 @@
 // src/pages/Placas/PlacasPage.jsx
-import React, { useState, useEffect } from 'react'; // Removido useCallback
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-// 1. Importar hooks do React Query
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-// Importa funções da API diretamente (não precisamos mais do dataCache para regioes aqui)
+// *** 🐞 CORREÇÃO: Corrigido 'fetchRegiões' para 'fetchRegioes' (sem acento) ***
 import { fetchPlacas, deletePlaca, togglePlacaDisponibilidade, fetchRegioes } from '../../services/api';
 import { useToast } from '../../components/ToastNotification/ToastNotification';
 import { useConfirmation } from '../../context/ConfirmationContext';
@@ -15,42 +14,40 @@ import './Placas.css';
 const ITEMS_PER_PAGE = 10; // Ou importe de config.js
 
 function PlacasPage() {
-  // Estados locais para filtros e página atual
   const [filters, setFilters] = useState({ regiao_id: 'todas', disponibilidade: 'todos', search: '' });
   const [currentPage, setCurrentPage] = useState(1);
 
   const navigate = useNavigate();
   const showToast = useToast();
   const showConfirmation = useConfirmation();
-  const queryClient = useQueryClient(); // Obter o cliente Query
+  const queryClient = useQueryClient();
 
-  // --- 2. useQuery para Regiões (usado no filtro) ---
+  // --- useQuery para Regiões (Filtro) ---
   const { data: regioes = [], isLoading: isLoadingRegioes } = useQuery({
-    queryKey: ['regioes'], // Chave para cache das regiões
-    queryFn: fetchRegioes, // Função da API para buscar regiões
-    staleTime: 1000 * 60 * 60, // Cache de 1 hora para regiões (exemplo)
-    placeholderData: [], // Evita 'undefined' na primeira renderização
+    queryKey: ['regioes'],
+    queryFn: fetchRegioes, // Agora corresponde à importação correta
+    staleTime: 1000 * 60 * 60,
+    placeholderData: [],
   });
 
-  // --- 3. useQuery para Placas (depende de filtros e página) ---
-  const queryKeyPlacas = ['placas', filters, currentPage]; // Chave de query dinâmica
+  // --- useQuery para Placas ---
+  const queryKeyPlacas = ['placas', filters, currentPage];
   const {
-    data: placasData, // Renomeia para evitar conflito com 'placas' state (removido)
-    isLoading: isLoadingPlacas, // Loading das placas
-    isError: isErrorPlacas, // Erro ao buscar placas
-    error: errorPlacas, // Objeto de erro
-    isPlaceholderData, // Indica se os dados mostrados são do cache enquanto busca novos
+    data: placasData,
+    isLoading: isLoadingPlacas,
+    isError: isErrorPlacas,
+    error: errorPlacas,
+    isPlaceholderData,
   } = useQuery({
     queryKey: queryKeyPlacas,
-    // A função queryFn recebe o queryKey como argumento
     queryFn: async ({ queryKey }) => {
-      const [_key, currentFilters, page] = queryKey; // Desestrutura a chave
-      console.log(`Fetching placas - Page: ${page}, Filters:`, currentFilters);
+      const [_key, currentFilters, page] = queryKey;
+      if (import.meta.env.DEV) console.log(`Fetching placas - Page: ${page}, Filters:`, currentFilters);
       const params = new URLSearchParams({
         page,
         limit: ITEMS_PER_PAGE,
         sortBy: 'createdAt',
-        order: 'desc'
+        order: 'asc' // Ordenar da mais antiga para a mais nova
       });
       if (currentFilters.regiao_id !== 'todas') params.append('regiao_id', currentFilters.regiao_id);
       if (currentFilters.search) params.append('search', currentFilters.search);
@@ -58,41 +55,47 @@ function PlacasPage() {
       else if (currentFilters.disponibilidade === 'false' || currentFilters.disponibilidade === 'manutencao') {
           params.append('disponivel', 'false');
       }
-      const result = await fetchPlacas(params); // Chama a API
-      return result; // Retorna { data: [], pagination: {} }
+      const result = await fetchPlacas(params);
+      return result;
     },
-    placeholderData: (previousData) => previousData, // Mantém dados antigos visíveis durante o refetch
-    // staleTime: 1000 * 30 // Opcional: considerar dados "frescos" por 30s
+    placeholderData: (previousData) => previousData,
   });
 
-  // Extrai dados e paginação do resultado do useQuery
   const placas = placasData?.data ?? [];
   const pagination = placasData?.pagination ?? { currentPage: 1, totalPages: 1, totalDocs: 0 };
 
-  // --- 4. Mutações (Delete, Toggle) ---
+  // --- Mutações (Delete, Toggle) ---
 
   // Mutação para Apagar Placa
   const deleteMutation = useMutation({
-    mutationFn: deletePlaca, // API fn (recebe placaId)
-    onSuccess: (_, placaId) => { // O segundo argumento é a variável passada para mutate
+    mutationFn: deletePlaca,
+    onSuccess: (_, placaId) => {
       showToast('Placa apagada com sucesso!', 'success');
-      // Invalida a query atual para recarregar
       queryClient.invalidateQueries({ queryKey: queryKeyPlacas });
 
-      // Lógica Opcional: Se apagou o último item de uma página > 1,
-      // podemos tentar ir para a página anterior.
-      if (placas.length === 1 && currentPage > 1) {
-          // Pré-busca a página anterior
+      const validPlacasCount = placas.filter(p => !!p).length;
+      
+      if (validPlacasCount === 1 && currentPage > 1) {
+          const prevPage = currentPage - 1;
           queryClient.prefetchQuery({
-              queryKey: ['placas', filters, currentPage - 1],
-              queryFn: async () => { /* Função de fetch para a página anterior */
-                  const prevPage = currentPage - 1;
-                  const params = new URLSearchParams({ /* ... constrói params ... */ });
+              queryKey: ['placas', filters, prevPage],
+              queryFn: async () => {
+                  const params = new URLSearchParams({
+                    page: prevPage,
+                    limit: ITEMS_PER_PAGE,
+                    sortBy: 'createdAt',
+                    order: 'asc' 
+                  });
+                   if (filters.regiao_id !== 'todas') params.append('regiao_id', filters.regiao_id);
+                   if (filters.search) params.append('search', filters.search);
+                   if (filters.disponibilidade === 'true') params.append('disponivel', 'true');
+                   else if (filters.disponibilidade === 'false' || filters.disponibilidade === 'manutencao') {
+                       params.append('disponivel', 'false');
+                   }
                   return await fetchPlacas(params);
               }
           });
-          // Atualiza o estado da página localmente
-           setCurrentPage(prev => prev - 1);
+           setCurrentPage(prevPage);
       }
     },
     onError: (error) => {
@@ -102,18 +105,32 @@ function PlacasPage() {
 
   // Mutação para Alternar Disponibilidade
   const toggleMutation = useMutation({
-    mutationFn: togglePlacaDisponibilidade, // API fn (recebe placaId)
-    onSuccess: () => {
+    mutationFn: togglePlacaDisponibilidade,
+    onSuccess: (updatedPlaca) => {
       showToast('Status da placa atualizado!', 'success');
-      // Apenas invalida, não precisa mudar de página
-      queryClient.invalidateQueries({ queryKey: queryKeyPlacas });
+      
+      queryClient.setQueryData(queryKeyPlacas, (oldData) => {
+          if (!oldData || !oldData.data) return oldData;
+          
+          const updatedPlacaId = updatedPlaca.id || updatedPlaca._id;
+
+          return {
+              ...oldData,
+              data: oldData.data
+                  .filter(p => !!p) 
+                  .map(p => {
+                      const currentPlacaId = p.id || p._id;
+                      return currentPlacaId === updatedPlacaId ? updatedPlaca : p;
+                  }
+              )
+          };
+      });
     },
     onError: (error) => {
       showToast(error.message || 'Erro ao atualizar status.', 'error');
     }
   });
 
-  // Combina estados de loading principais
   const isLoading = isLoadingRegioes || isLoadingPlacas;
 
   // --- Efeito para pré-buscar próxima página ---
@@ -123,39 +140,45 @@ function PlacasPage() {
         queryKey: ['placas', filters, currentPage + 1],
         queryFn: async () => {
           const nextPage = currentPage + 1;
-          const params = new URLSearchParams({ page: nextPage, limit: ITEMS_PER_PAGE /* ... outros filtros ... */ });
-          // Constrói params completos
+          const params = new URLSearchParams({ 
+              page: nextPage, 
+              limit: ITEMS_PER_PAGE,
+              sortBy: 'createdAt',
+              order: 'asc'
+            });
           if (filters.regiao_id !== 'todas') params.append('regiao_id', filters.regiao_id);
           if (filters.search) params.append('search', filters.search);
           if (filters.disponibilidade === 'true') params.append('disponivel', 'true');
           else if (filters.disponibilidade === 'false' || filters.disponibilidade === 'manutencao') params.append('disponivel', 'false');
-          console.log(`Prefetching page ${nextPage}`);
+          if (import.meta.env.DEV) console.log(`Prefetching page ${nextPage}`);
           return await fetchPlacas(params);
         },
       });
     }
-  }, [placasData, isPlaceholderData, currentPage, pagination.totalPages, queryClient, filters]); // Dependências corretas
+  }, [placasData, isPlaceholderData, currentPage, pagination.totalPages, queryClient, filters]);
 
 
-  // --- Listener para 'search' do Header (inalterado) ---
+  // --- Listener para 'search' do Header ---
   useEffect(() => {
     const handleSearch = (event) => {
       const searchTerm = event.detail.query || '';
       if (window.location.pathname === '/placas') {
         setFilters(prevFilters => ({ ...prevFilters, search: searchTerm }));
-        setCurrentPage(1); // Volta para a página 1 ao pesquisar
+        setCurrentPage(1);
       }
     };
     document.addEventListener('search', handleSearch);
     return () => document.removeEventListener('search', handleSearch);
   }, []);
 
-  // --- Handlers de Ações (adaptados para usar mutações) ---
+  // --- Handlers de Ações ---
   const handleFilterChange = (event) => {
-    const { id, value } = event.target;
-    const filterName = id.replace('-filter', '');
-    setFilters(prevFilters => ({ ...prevFilters, [filterName]: value }));
-    setCurrentPage(1); // Volta para a página 1
+    const { name, value } = event.target;
+    setFilters(prevFilters => ({
+        ...prevFilters,
+        [name]: value
+    }));
+    setCurrentPage(1);
   };
 
   const handlePageChange = (newPage) => {
@@ -167,15 +190,12 @@ function PlacasPage() {
   const handleAddPlaca = () => navigate('/placas/novo');
   const handleEditPlaca = (placaId) => navigate(`/placas/editar/${placaId}`);
 
-  // Chama a mutação toggleMutation
   const handleToggleDisponibilidade = (placaId, buttonElement) => {
-      // O PlacaCard pode mostrar um spinner interno baseado em toggleMutation.isPending
       toggleMutation.mutate(placaId);
   };
 
-  // Chama a mutação deleteMutation após confirmação
   const handleDeletePlaca = async (placaId, buttonElement) => {
-    const placaToDelete = placas.find(p => String(p.id || p._id) === String(placaId));
+    const placaToDelete = placas.filter(p => !!p).find(p => String(p.id || p._id) === String(placaId));
     const numeroPlaca = placaToDelete?.numero_placa || `ID ${placaId}`;
 
     try {
@@ -184,7 +204,6 @@ function PlacasPage() {
         title: "Confirmar Exclusão",
         confirmButtonType: "red",
       });
-      // Se confirmado, chama a mutação
       deleteMutation.mutate(placaId);
     } catch {
       // Cancelado
@@ -193,7 +212,7 @@ function PlacasPage() {
 
 
   // --- Renderização ---
-  const renderPaginationButtons = () => { /* ... (lógica inalterada, usa pagination do useQuery) ... */
+  const renderPaginationButtons = () => {
       if (!pagination || pagination.totalPages <= 1) return null;
       const buttons = [];
       buttons.push( <button key="prev" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1 || isPlaceholderData}> &laquo; Ant </button> );
@@ -209,20 +228,23 @@ function PlacasPage() {
         <div className="placas-page__filters">
           <select
             id="regiao-filter"
+            name="regiao_id" 
             className="placas-page__filter-select"
             value={filters.regiao_id}
             onChange={handleFilterChange}
-            disabled={isLoadingRegioes || isLoadingPlacas} // Desabilita se qualquer um estiver carregando
+            disabled={isLoadingRegioes || isLoadingPlacas}
           >
             <option value="todas">Todas as Regiões</option>
             {regioes.map(r => <option key={r._id} value={r._id}>{r.nome}</option>)}
           </select>
+          
           <select
             id="disponibilidade-filter"
+            name="disponibilidade"
             className="placas-page__filter-select"
             value={filters.disponibilidade}
             onChange={handleFilterChange}
-            disabled={isLoadingPlacas} // Apenas loading das placas aqui
+            disabled={isLoadingPlacas}
           >
             <option value="todos">Todos Status</option>
             <option value="true">Disponível</option>
@@ -234,35 +256,44 @@ function PlacasPage() {
             id="add-placa-button"
             className="placas-page__add-button"
             onClick={handleAddPlaca}
-            disabled={isLoadingPlacas} // Desabilita durante o loading
+            disabled={isLoadingPlacas}
         >
           <i className="fas fa-plus"></i> Adicionar Placa
         </button>
       </div>
 
       <div id="placas-grid" className="placas-page__placas-grid">
-        {isLoadingPlacas && placas.length === 0 ? ( // Mostra spinner principal só no load inicial
+        {isLoadingPlacas && placas.length === 0 ? (
           <Spinner message="A carregar placas..." />
         ) : isErrorPlacas ? (
           <div className="placas-page__error">Erro: {errorPlacas.message}</div>
         ) : placas.length > 0 ? (
-          placas.map(placa => (
-            <PlacaCard
-              key={placa.id || placa._id}
-              placa={placa}
-              onToggle={handleToggleDisponibilidade}
-              onEdit={handleEditPlaca}
-              onDelete={handleDeletePlaca}
-              // Opcional: passar estados de pending das mutações para feedback no card
-              isToggling={toggleMutation.isPending && toggleMutation.variables === (placa.id || placa._id)}
-              isDeleting={deleteMutation.isPending && deleteMutation.variables === (placa.id || placa._id)}
-            />
-          ))
+          placas
+            .filter(placa => !!placa) 
+            .map((placa, index) => { 
+                const placaId = placa.id || placa._id;
+                if (!placaId) return null; 
+                
+                const sequentialNumber = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
+
+                return (
+                    <PlacaCard
+                    key={placaId}
+                    placa={placa}
+                    sequentialNumber={sequentialNumber} 
+                    onToggle={handleToggleDisponibilidade}
+                    onEdit={handleEditPlaca}
+                    onDelete={handleDeletePlaca}
+                    isToggling={toggleMutation.isPending && toggleMutation.variables === placaId}
+                    isDeleting={deleteMutation.isPending && deleteMutation.variables === placaId}
+                    />
+                );
+            })
         ) : (
-          <div className="placas-page__no-results">Nenhuma placa encontrada com os filtros atuais.</div>
+          (placas.filter(p => !!p).length === 0 && placasData?.pagination?.totalDocs > 0) ?
+            <div className="placas-page__no-results">Problema ao carregar dados. Tente atualizar a página.</div> :
+            <div className="placas-page__no-results">Nenhuma placa encontrada com os filtros atuais.</div>
         )}
-         {/* Opcional: mostrar um spinner menor durante refetch/placeholder */}
-         {/* {isLoadingPlacas && isPlaceholderData && <Spinner message="Atualizando..." />} */}
       </div>
 
       <div id="pagination-container" className="placas-page__pagination">

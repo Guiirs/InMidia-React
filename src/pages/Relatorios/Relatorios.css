@@ -3,42 +3,160 @@
 /* Bloco Principal */
 .relatorios-page {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* Duas colunas de tamanho igual */
-    gap: 3rem; /* Ajustado */
+    /* Define o layout em linhas: controles, (sumário), (gráficos) */
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    /* Faz com que os controles ocupem a largura total */
+    grid-template-areas:
+        "controls controls"
+        "content content";
 }
 
-/* Elemento do Bloco */
+/* --- NOVOS ESTILOS: Controles de Data --- */
+.relatorios-page__controls {
+    grid-area: controls; /* Ocupa a área definida no grid */
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end; /* Alinha labels e inputs */
+    gap: 2rem;
+    background-color: var(--bg-secondary-color);
+    padding: 2.4rem;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--input-border);
+}
+
+.relatorios-page__filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.relatorios-page__filter-group label {
+    font-weight: 500;
+    color: var(--text-color-light);
+    font-size: 1.3rem;
+    text-transform: uppercase;
+}
+
+.relatorios-page__date-input {
+    background-color: var(--bg-color);
+    border: 1px solid var(--input-border);
+    border-radius: 1rem;
+    padding: 1.2rem 1.5rem;
+    color: var(--text-color);
+    font-family: 'Poppins', sans-serif;
+    font-size: 1.5rem;
+    width: 20rem; /* Largura fixa para date pickers */
+    box-sizing: border-box;
+}
+/* Estilização do ícone do calendário (pode variar por browser) */
+.relatorios-page__date-input::-webkit-calendar-picker-indicator {
+    filter: invert(var(--invert-icon, 0)); /* Inverte o ícone no tema escuro se precisar */
+}
+:root { --invert-icon: 1; }
+body.light-theme { --invert-icon: 0; }
+
+
+.relatorios-page__submit-button {
+    background-color: var(--accent-green);
+    color: white;
+    padding: 1.2rem 2.4rem;
+    border-radius: 1rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    font-size: 1.5rem;
+    transition: background-color 0.3s ease;
+    height: 4.9rem; /* Alinha altura com os inputs */
+}
+.relatorios-page__submit-button:hover:not(:disabled) {
+    background-color: #1a9c4a;
+}
+.relatorios-page__submit-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* --- NOVOS ESTILOS: Summary Cards (copiado do Dashboard.css) --- */
+.relatorios-page__summary {
+    grid-column: 1 / -1; /* Ocupa a largura total */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+}
+
+/* (Estilos .summary-card, .summary-card__icon, etc. 
+   Assume-se que estão definidos globalmente ou em Dashboard.css 
+   Se não, copie-os de Dashboard.css para aqui) 
+*/
+
+
+/* --- Conteúdo (Gráficos ou Mensagens) --- */
 .relatorios-page__chart-container {
     background-color: var(--bg-secondary-color);
-    padding: 2.4rem; /* Ajustado */
+    padding: 2.4rem;
     border-radius: var(--border-radius);
     border: 1px solid var(--input-border);
     box-shadow: var(--box-shadow);
+    /* Ocupa 1 coluna por padrão (grid 1fr 1fr) */
 }
 
 .relatorios-page__chart-title {
     margin-top: 0;
-    margin-bottom: 2rem; /* Ajustado */
-    font-size: 1.8rem; /* Ajustado (era 1.2rem * 1.5) */
+    margin-bottom: 2rem;
+    font-size: 1.8rem;
     font-weight: 600;
     color: var(--text-color);
 }
 
-/* Estilo para o canvas do gráfico, para garantir que ele se ajuste ao contentor */
 .relatorios-page__chart-canvas {
-    width: 100% !important; /* Mantido */
-    height: 350px !important; /* Mantido em px */
-    /* ou height: 35rem !important; */
+    width: 100% !important;
+    height: 350px !important;
 }
 
-/* Modificador para um gráfico que ocupe a largura total */
-.relatorios-page__chart-container--full-width {
-    grid-column: 1 / -1; /* Ocupa as duas colunas */
+/* Modificador para ocupar a largura total (para Spinner ou mensagens) */
+.relatorios-page__full-width-container {
+    grid-column: 1 / -1;
+    background-color: var(--bg-secondary-color);
+    padding: 2.4rem;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--input-border);
+    text-align: center;
+    min-height: 20rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+.relatorios-page__full-width-container p {
+    font-size: 1.6rem;
+    color: var(--text-color-light);
+}
+
 
 /* Responsividade */
-@media (max-width: 992px) { /* Mantido breakpoint */
+@media (max-width: 992px) {
     .relatorios-page {
         grid-template-columns: 1fr; /* Coluna única */
+        grid-template-areas:
+            "controls"
+            "content";
+    }
+    
+    /* Faz os gráficos ficarem em coluna única também */
+    .relatorios-page__chart-container {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 576px) {
+    .relatorios-page__controls {
+        flex-direction: column; /* Empilha os filtros */
+        align-items: stretch; /* Alarga os inputs/botões */
+    }
+    .relatorios-page__date-input {
+        width: 100%; /* Largura total */
+    }
+    .relatorios-page__submit-button {
+        height: auto; /* Altura automática */
     }
 }
