@@ -9,11 +9,13 @@ import Spinner from '../../components/Spinner/Spinner';
 import Modal from '../../components/Modal/Modal';
 import './Clientes.css';
 
-const clientesQueryKey = ['clientes'];
+const clientesQueryKey = 'clientes'; // Simplificado para o exemplo
 
 function ClientesPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCliente, setEditingCliente] = useState(null);
+    // TODO: Adicionar estado de paginação
+    const [currentPage, setCurrentPage] = useState(1);
     
     const showToast = useToast();
     const showConfirmation = useConfirmation();
@@ -28,7 +30,6 @@ function ClientesPage() {
         formState: { errors: formErrors }
     } = useForm({
         mode: 'onBlur',
-        // --- ALTERAÇÃO AQUI --- (Valores padrão)
         defaultValues: {
             nome: '',
             email: '',
@@ -45,7 +46,6 @@ function ClientesPage() {
     // Resetar o form quando o modal abrir
     useEffect(() => {
         if (isModalOpen) {
-            // --- ALTERAÇÃO AQUI --- (Reset com novos campos)
             reset(editingCliente || { 
                 nome: '', 
                 email: '', 
@@ -61,11 +61,19 @@ function ClientesPage() {
     }, [isModalOpen, editingCliente, reset]);
 
 
-    // --- Queries & Mutações ---
-    const { data: clientes = [], isLoading, isError, error } = useQuery({
-        queryKey: clientesQueryKey,
-        queryFn: fetchClientes,
+    // --- [CORREÇÃO APLICADA AQUI] ---
+    // A query agora passa parâmetros (page, limit) e usa 'select' para extrair o array
+    const { data: clientesData, isLoading, isError, error } = useQuery({
+        queryKey: [clientesQueryKey, currentPage], // Depende da página
+        queryFn: () => fetchClientes(new URLSearchParams({ page: currentPage, limit: 10 })), // Passa params
+        select: (data) => data.data ?? [], // Extrai o array 'data' de dentro do objeto
+        placeholderData: { data: [] }      // Define um placeholder válido
     });
+
+    const clientes = clientesData || []; // 'clientes' é garantido como um array
+    // TODO: Extrair 'pagination'
+    // const pagination = useQuery(...).data?.pagination ?? { currentPage: 1, totalPages: 1 };
+    // --- [FIM DA CORREÇÃO] ---
 
     const handleApiError = (error, context) => {
         const apiErrors = error.response?.data?.errors;
@@ -82,7 +90,7 @@ function ClientesPage() {
         onSuccess: () => {
             showToast('Cliente criado com sucesso!', 'success');
             closeModal();
-            queryClient.invalidateQueries({ queryKey: clientesQueryKey });
+            queryClient.invalidateQueries({ queryKey: [clientesQueryKey] });
         },
         onError: handleApiError
     });
@@ -92,7 +100,7 @@ function ClientesPage() {
         onSuccess: () => {
             showToast('Cliente atualizado com sucesso!', 'success');
             closeModal();
-            queryClient.invalidateQueries({ queryKey: clientesQueryKey });
+            queryClient.invalidateQueries({ queryKey: [clientesQueryKey] });
         },
         onError: handleApiError
     });
@@ -101,7 +109,7 @@ function ClientesPage() {
         mutationFn: deleteCliente,
         onSuccess: () => {
             showToast('Cliente apagado com sucesso!', 'success');
-            queryClient.invalidateQueries({ queryKey: clientesQueryKey });
+            queryClient.invalidateQueries({ queryKey: [clientesQueryKey] });
         },
         onError: (error) => showToast(error.message || 'Erro ao apagar cliente.', 'error')
     });
@@ -198,6 +206,8 @@ function ClientesPage() {
                     </tbody>
                 </table>
             </div>
+
+            {/* TODO: Adicionar controles de paginação aqui */}
 
             <Modal
                 title={editingCliente ? 'Editar Cliente' : 'Adicionar Novo Cliente'}

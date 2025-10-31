@@ -6,63 +6,81 @@ import { useAuth } from '../../context/AuthContext';
 import './EmpresaSettings.css';
 
 function EmpresaSettingsPage() {
-  const { user } = useAuth();
-  const location = useLocation();
+  const { user } = useAuth();
+  const location = useLocation();
 
-  // Se a rota for exatamente /empresa-settings, define qual aba é a padrão
-  // (Vamos definir '/empresa-settings/detalhes' como padrão no App.jsx no Passo 4)
-  const isRootPath = location.pathname === '/empresa-settings';
+  // Se a rota for exatamente /empresa-settings, define qual aba é a padrão
+  const isRootPath = location.pathname === '/empresa-settings';
 
-  return (
-    <div className="empresa-settings-page">
-      
-      {/* [MELHORIA] Nova barra de navegação interna (Abas) */}
-      <div className="empresa-settings-page__nav">
-        <NavLink
-          to="/empresa-settings/detalhes"
-          // O NavLink aplica a classe 'active' automaticamente.
-          // Se estivermos na rota raiz /empresa-settings, ativamos "Detalhes" como padrão.
-          className={({ isActive }) =>
-            `empresa-settings-page__nav-link ${(isActive || isRootPath) ? 'active' : ''}`
-          }
-        >
-          <i className="fas fa-building"></i>
-          Detalhes
-        </NavLink>
+  // --- CORREÇÃO AQUI ---
+  // Criamos uma função helper para o className, 
+  // para que 'active' seja aplicado a todos os NavLinks.
+  const getNavLinkClass = ({ isActive }) => {
+    return `empresa-settings-page__nav-link ${isActive ? 'active' : ''}`;
+  };
+
+  // Esta classe especial é SÓ para o 'Detalhes', para que ele
+  // fique ativo quando estiver na raiz /empresa-settings
+  const getDetalhesClass = ({ isActive }) => {
+     return `empresa-settings-page__nav-link ${(isActive || isRootPath) ? 'active' : ''}`;
+  };
+  // --- FIM DA CORREÇÃO ---
+
+  return (
+    <div className="empresa-settings-page">
+      
+      {/* [MELHORIA] Nova barra de navegação interna (Abas) */}
+      <div className="empresa-settings-page__nav">
+        <NavLink
+          to="/empresa-settings/detalhes" // O 'to' estava correto
+          className={getDetalhesClass} // Aplicamos a classe helper
+        >
+          <i className="fas fa-building"></i>
+          Detalhes
+        </NavLink>
+        
+        {/* Só mostra a aba de API Key se for Admin */}
+        {user?.role === 'admin' && (
+          <NavLink
+            to="/empresa-settings/api" // O 'to' estava correto
+            className={getNavLinkClass} // Aplicamos a classe helper
+          >
+            <i className="fas fa-key"></i>
+            API Key
+          </NavLink>
+        )}
+
+        {/* --- CORREÇÃO PRINCIPAL AQUI --- */}
+        {/* Os links devem ser relativos para carregar no <Outlet /> */}
+
+        <NavLink
+          to="/propostas" // Alterado de "/propostas" para "propostas"
+          className={getNavLinkClass} // Aplicamos a classe helper
+        >
+          <i className="fas fa-file-invoice-dollar"></i>
+          Gestão (PIs)
+        </NavLink> 
         
-        {/* Só mostra a aba de API Key se for Admin */}
-        {user?.role === 'admin' && (
-          <NavLink
-            to="/empresa-settings/api"
-            className="empresa-settings-page__nav-link" 
-          >
-            <i className="fas fa-key"></i>
-            API Key
-          </NavLink>
-        )}
-
-        {/* [MELHORIA] Botão para Gestão de PIs/Contratos (conforme solicitado).
-          Vamos usar a rota /propostas que já definimos no backend.
-        */}
         <NavLink
-          to="/propostas" // Esta rota NÃO é aninhada, ela é uma seção principal
-          className="empresa-settings-page__nav-link"
-        >
-          <i className="fas fa-file-invoice-dollar"></i>
-          Gestão (PIs & Contratos)
-        </NavLink>
+          to="/contratos" // Alterado de "/contratos" para "contratos"
+          className={getNavLinkClass} // Aplicamos a classe helper
+        >
+          <i className="fas fa-file-invoice-dollar"></i>
+          Gestão (Contratos)
+        </NavLink>
+        {/* --- FIM DA CORREÇÃO --- */}
 
-      </div>
+      </div>
 
-      {/* [MELHORIA] Conteúdo da Sub-página 
-        O React Router irá renderizar as rotas aninhadas (como 'detalhes' e 'api') aqui.
-      */}
-      <div className="empresa-settings-page__content">
-        <Outlet />
-      </div>
+      {/* [MELHORIA] Conteúdo da Sub-página 
+        O React Router irá renderizar as rotas aninhadas (como 'detalhes' e 'api') aqui.
+      */}
+      <div className="empresa-settings-page__content">
+        <Outlet />
+      </div>
 
-    </div>
-  );
+    </div>
+  );
 }
 
 export default EmpresaSettingsPage;

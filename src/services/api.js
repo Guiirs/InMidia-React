@@ -43,9 +43,6 @@ apiClient.interceptors.request.use(
 );
 
 
-// --- [CORREÇÃO APLICADA AQUI] ---
-// O interceptor de resposta foi atualizado para preservar o objeto de erro completo
-// (incluindo `error.response.data.errors`) para o React Query.
 apiClient.interceptors.response.use(
   (response) => {
     // Sucesso, apenas retorna a resposta
@@ -90,9 +87,6 @@ apiClient.interceptors.response.use(
         errorMessage = data?.message || error.message || `Erro ${status}`;
       }
       
-      // [A CORREÇÃO PRINCIPAL]
-      // Criamos um novo erro, mas anexamos a RESPOSTA COMPLETA
-      // para que o React Query possa aceder a error.response.data.errors
       const enhancedError = new Error(errorMessage);
       enhancedError.response = error.response; // Anexa a resposta original
       enhancedError.response.data = errorData; // Garante que a 'data' (seja JSON ou o Blob decodificado) esteja lá
@@ -108,11 +102,9 @@ apiClient.interceptors.response.use(
     }
   }
 );
-// --- [FIM DA CORREÇÃO] ---
-
 
 // -----------------------------------------------------------------------------
-// Funções da API Exportadas (Inalteradas)
+// Funções da API Exportadas
 // -----------------------------------------------------------------------------
 
 // --- ROTAS PÚBLICAS ---
@@ -299,14 +291,7 @@ export const regenerateApiKey = async (password) => {
     }
 };
 
-// --- [CORREÇÃO APLICADA AQUI] ---
 // --- Rotas de Empresa (Detalhes) ---
-// Funções que faltavam para o EmpresaDetalhes.jsx
-// Elas usam as rotas do backend /empresa/details que definimos.
-
-/**
- * Busca os detalhes da empresa logada (nome, cnpj, endereço, etc.)
- */
 export const getEmpresaDetails = async () => {
     try {
         const response = await apiClient.get('/empresa/details');
@@ -317,10 +302,6 @@ export const getEmpresaDetails = async () => {
     }
 };
 
-/**
- * Atualiza os detalhes da empresa logada
- * @param {object} data - Dados da empresa (nome, cnpj, endereco, etc.)
- */
 export const updateEmpresaDetails = async (data) => {
     try {
         const response = await apiClient.put('/empresa/details', data);
@@ -330,14 +311,16 @@ export const updateEmpresaDetails = async (data) => {
         throw error;
     }
 };
-// --- [FIM DA CORREÇÃO] ---
-
 
 // --- Rotas de Clientes ---
-export const fetchClientes = async () => {
+/**
+ * @param {URLSearchParams} params - Parâmetros de query (page, limit, etc.)
+ */
+export const fetchClientes = async (params) => {
     try {
-        const response = await apiClient.get('/clientes');
-        return response.data;
+        const queryString = params ? `?${params.toString()}` : ''; // Adiciona params à query
+        const response = await apiClient.get(`/clientes${queryString}`);
+        return response.data; // Retorna o objeto { data: [...], pagination: ... }
     } catch (error) {
         if (import.meta.env.DEV) console.error('[API fetchClientes] Erro:', error);
         throw error;
@@ -508,12 +491,6 @@ export const downloadRelatorioOcupacaoPDF = async (data_inicio, data_fim) => {
 };
 
 // --- [NOVO] Rotas de Propostas Internas (PIs) ---
-
-/**
- * Busca a lista paginada de PIs.
- * @param {URLSearchParams} params - Parâmetros de query (page, limit, status, clienteId).
- * @returns {Promise<object>} - Objeto com { data: Array<PI>, pagination: object }.
- */
 export const fetchPIs = async (params) => {
     try {
         const response = await apiClient.get(`/pis?${params.toString()}`);
@@ -524,11 +501,6 @@ export const fetchPIs = async (params) => {
     }
 };
 
-/**
- * Cria uma nova Proposta Interna (PI).
- * @param {object} piData - Dados da PI (clienteId, tipoPeriodo, datas, valor, etc.).
- * @returns {Promise<object>} - A nova PI criada.
- */
 export const createPI = async (piData) => {
     try {
         const response = await apiClient.post('/pis', piData);
@@ -539,12 +511,6 @@ export const createPI = async (piData) => {
     }
 };
 
-/**
- * Atualiza uma Proposta Interna (PI).
- * @param {string} id - ID da PI.
- * @param {object} piData - Dados da PI a atualizar.
- * @returns {Promise<object>} - A PI atualizada.
- */
 export const updatePI = async (id, piData) => {
     try {
         const response = await apiClient.put(`/pis/${id}`, piData);
@@ -555,11 +521,6 @@ export const updatePI = async (id, piData) => {
     }
 };
 
-/**
- * Apaga uma Proposta Interna (PI).
- * @param {string} id - ID da PI.
- * @returns {Promise<void>}
- */
 export const deletePI = async (id) => {
     try {
         await apiClient.delete(`/pis/${id}`);
@@ -569,11 +530,6 @@ export const deletePI = async (id) => {
     }
 };
 
-/**
- * Solicita o download do PDF da PI.
- * @param {string} id - ID da PI.
- * @returns {Promise<{blob: Blob, filename: string}>} - O arquivo PDF.
- */
 export const downloadPI_PDF = async (id) => {
     try {
         const response = await apiClient.get(`/pis/${id}/download`, {
@@ -600,12 +556,6 @@ export const downloadPI_PDF = async (id) => {
 
 
 // --- [NOVO] Rotas de Contratos ---
-
-/**
- * Cria um Contrato a partir de uma PI.
- * @param {string} piId - ID da Proposta Interna.
- * @returns {Promise<object>} - O novo Contrato criado.
- */
 export const createContrato = async (piId) => {
     try {
         const response = await apiClient.post('/contratos', { piId });
@@ -616,11 +566,6 @@ export const createContrato = async (piId) => {
     }
 };
 
-/**
- * Solicita o download do PDF do Contrato.
- * @param {string} id - ID do Contrato.
- * @returns {Promise<{blob: Blob, filename: string}>} - O arquivo PDF.
-a */
 export const downloadContrato_PDF = async (id) => {
     try {
         const response = await apiClient.get(`/contratos/${id}/download`, {

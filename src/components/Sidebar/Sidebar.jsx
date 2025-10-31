@@ -15,13 +15,14 @@ function Sidebar() {
   // [MELHORIA] Pega a localização atual
   const location = useLocation();
 
-  // [MELHORIA] Função para checar se o link "Empresa" ou seus filhos estão ativos
-  // (Verifica /empresa-settings, /propostas, ou /contratos)
+  // --- ALTERAÇÃO AQUI ---
+  // Simplificamos a função. Como /propostas e /contratos agora
+  // são filhos de /empresa-settings (graças à alteração no App.jsx),
+  // só precisamos de verificar a rota pai.
   const isEmpresaActive = () => {
-      return location.pathname.startsWith('/empresa-settings') ||
-             location.pathname.startsWith('/propostas') ||
-             location.pathname.startsWith('/contratos');
+      return location.pathname.startsWith('/empresa-settings');
   };
+  // --- FIM DA ALTERAÇÃO ---
 
   // --- Lógica do Tema (Inalterada do seu arquivo original) ---
   const [theme, setTheme] = useState(() => {
@@ -86,6 +87,9 @@ function Sidebar() {
           <li><NavLink to="/regioes" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-map-marked-alt"></i> <span>Regiões</span></NavLink></li>
           <li><NavLink to="/map" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-map"></i> <span>Mapa</span></NavLink></li>
           <li><NavLink to="/relatorios" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-chart-pie"></i> <span>Relatórios</span></NavLink></li>
+          
+          {/* Links de Propostas e Contratos removidos daqui (correto) */}
+
           {userIsAdmin && (
             <li><NavLink to="/admin-users" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-shield-alt"></i> <span>Admin</span></NavLink></li>
           )}
@@ -98,7 +102,7 @@ function Sidebar() {
         {/* [MELHORIA APLICADA AQUI] */}
         <NavLink 
           to="/empresa-settings" 
-          // Usa a função 'isEmpresaActive' para determinar se o link (ou seus filhos) estão ativos
+          // Usa a nova função 'isEmpresaActive'
           className={`sidebar__nav-link ${isEmpresaActive() ? 'sidebar__nav-link--active' : ''}`} 
           data-link
         >

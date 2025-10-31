@@ -39,6 +39,11 @@ const EmpresaSettingsPage = lazy(() => import('./pages/Empresa/EmpresaSettingsPa
 const EmpresaDetalhes = lazy(() => import('./pages/Empresa/subpages/EmpresaDetalhes'));
 const EmpresaApiKey = lazy(() => import('./pages/Empresa/subpages/EmpresaApiKey'));
 
+// --- ALTERAÇÃO AQUI ---
+// 1. Importe a nova página de Contratos (que ainda vamos criar)
+const ContratosPage = lazy(() => import('./pages/Contratos/ContratosPage'));
+// ---------------------
+
 
 function App() {
   return (
@@ -67,21 +72,24 @@ function App() {
               <Route path="/relatorios" element={<RelatoriosPage />} />
               <Route path="/user" element={<UserPage />} />
               
-              {/* [MELHORIA] Rotas Aninhadas de Empresa */}
+              {/* Rota de Empresa (como estava no seu original) */}
               <Route path="/empresa-settings" element={<EmpresaSettingsPage />}>
-                {/* Rota padrão (aba Detalhes) */}
                 <Route index element={<Navigate to="detalhes" replace />} />
                 <Route path="detalhes" element={<EmpresaDetalhes />} />
                 
-                {/* Rota da API (só renderiza se for Admin) */}
                 <Route element={<AdminRoute />}>
                   <Route path="api" element={<EmpresaApiKey />} />
                 </Route>
               </Route>
               
-              {/* Rota de Gestão (PIs) - (Mantém-se separada, como definido no hub) */}
+              {/* Rota de Gestão (PIs) (como estava no seu original) */}
               <Route path="/propostas" element={<PIsPage />} />
               
+              {/* --- ALTERAÇÃO AQUI --- */}
+              {/* 2. Adicione a rota para a nova página de Contratos */}
+              <Route path="/contratos" element={<ContratosPage />} />
+              {/* --------------------- */}
+
               {/* Rotas de Admin */}
               <Route element={<AdminRoute />}>
                  <Route path="/admin-users" element={<AdminUsersPage />} />

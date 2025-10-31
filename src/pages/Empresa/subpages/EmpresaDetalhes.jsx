@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { getEmpresaDetails, updateEmpresaDetails } from '../../../services/api';
 import { useToast } from '../../../components/ToastNotification/ToastNotification';
 import Spinner from '../../../components/Spinner/Spinner';
-import '../EmpresaSettings.css'; // <-- CORREÇÃO APLICADA AQUI
+import '../EmpresaSettings.css'; // O CSS importado está correto
 
 function EmpresaDetalhes() {
     const showToast = useToast();
@@ -25,28 +25,26 @@ function EmpresaDetalhes() {
         setError, 
         formState: { errors, isDirty } 
     } = useForm({
-        // --- ALTERAÇÃO AQUI ---
         defaultValues: {
             nome: '',
             cnpj: '',
-            endereco: '', // Adicionado
-            bairro: '',   // Adicionado
-            cidade: '',   // Adicionado
-            telefone: ''  // Adicionado
+            endereco: '', 
+            bairro: '',   
+            cidade: '',   
+            telefone: ''  
         }
     });
 
     // Carregar dados no form quando a query retornar
     useEffect(() => {
         if (empresaData) {
-            // --- ALTERAÇÃO AQUI ---
             reset({
                 nome: empresaData.nome || '',
                 cnpj: empresaData.cnpj || '',
-                endereco: empresaData.endereco || '', // Adicionado
-                bairro: empresaData.bairro || '',   // Adicionado
-                cidade: empresaData.cidade || '',   // Adicionado
-                telefone: empresaData.telefone || ''  // Adicionado
+                endereco: empresaData.endereco || '', 
+                bairro: empresaData.bairro || '',   
+                cidade: empresaData.cidade || '',   
+                telefone: empresaData.telefone || ''  
             });
         }
     }, [empresaData, reset]);
@@ -87,15 +85,16 @@ function EmpresaDetalhes() {
     }
 
     return (
-        <form className="settings-card" onSubmit={handleSubmit(onFormSubmit)} noValidate>
-            <div className="settings-card__header">
+        // --- CORREÇÃO: Renomeado de 'settings-card' para 'empresa-settings-card' ---
+        <form className="empresa-settings-card" onSubmit={handleSubmit(onFormSubmit)} noValidate>
+            <div className="empresa-settings-card__header">
                 <h3>Detalhes da Empresa</h3>
                 <p>Informações principais da sua empresa que aparecerão em relatórios e contratos.</p>
             </div>
             
-            <div className="settings-card__content">
+            <div className="empresa-settings-card__content">
                 {/* Nome */}
-                <div className="settings-card__input-group">
+                <div className="empresa-settings-card__input-group">
                     <label htmlFor="nome">Nome / Razão Social</label>
                     <input
                         type="text"
@@ -108,7 +107,7 @@ function EmpresaDetalhes() {
                 </div>
                 
                 {/* CNPJ */}
-                <div className="settings-card__input-group">
+                <div className="empresa-settings-card__input-group">
                     <label htmlFor="cnpj">CNPJ</label>
                     <input
                         type="text"
@@ -119,11 +118,9 @@ function EmpresaDetalhes() {
                     />
                     {errors.cnpj && <div className="modal-form__error-message">{errors.cnpj.message}</div>}
                 </div>
-
-                {/* --- NOVOS CAMPOS ADICIONADOS --- */}
                 
                 {/* Endereço */}
-                <div className="settings-card__input-group">
+                <div className="empresa-settings-card__input-group">
                     <label htmlFor="endereco">Endereço</label>
                     <input
                         type="text"
@@ -135,7 +132,7 @@ function EmpresaDetalhes() {
                 </div>
                 
                 {/* Bairro */}
-                <div className="settings-card__input-group">
+                <div className="empresa-settings-card__input-group">
                     <label htmlFor="bairro">Bairro</label>
                     <input
                         type="text"
@@ -147,7 +144,7 @@ function EmpresaDetalhes() {
                 </div>
                 
                 {/* Cidade */}
-                <div className="settings-card__input-group">
+                <div className="empresa-settings-card__input-group">
                     <label htmlFor="cidade">Cidade</label>
                     <input
                         type="text"
@@ -159,7 +156,7 @@ function EmpresaDetalhes() {
                 </div>
                 
                 {/* Telefone */}
-                <div className="settings-card__input-group">
+                <div className="empresa-settings-card__input-group">
                     <label htmlFor="telefone">Telefone</label>
                     <input
                         type="tel"
@@ -170,11 +167,9 @@ function EmpresaDetalhes() {
                     />
                 </div>
 
-                {/* --- FIM DOS NOVOS CAMPOS --- */}
-
             </div>
             
-            <div className="settings-card__actions">
+            <div className="empresa-settings-card__actions">
                 <button 
                     type="submit" 
                     className="modal-form__button modal-form__button--confirm"

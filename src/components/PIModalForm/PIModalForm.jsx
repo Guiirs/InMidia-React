@@ -1,28 +1,56 @@
 // src/components/PIModalForm/PIModalForm.jsx
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useMemo } from 'react'; 
 import PropTypes from 'prop-types';
 import { useForm } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
-// --- ALTERAÇÃO AQUI ---
-import { fetchClientes, fetchPlacas } from '../../services/api'; 
+import { fetchClientes, fetchPlacas, fetchRegioes } from '../../services/api'; 
+
+// --- HOOK DE DEBOUNCE ---
+function useDebounce(value, delay) {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+    return debouncedValue;
+}
+// -------------------------
+
 
 // Componente puro para o formulário de PI
 function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
     
-    // Busca clientes para o <select>
+    // Estados para os filtros
+    const [selectedRegiao, setSelectedRegiao] = useState(''); 
+    const [placaSearch, setPlacaSearch] = useState(''); 
+    const debouncedPlacaSearch = useDebounce(placaSearch, 300); 
+
+    // Query de Clientes (Corrigida)
     const { data: clientes = [], isLoading: isLoadingClientes } = useQuery({
         queryKey: ['clientes'], 
-        queryFn: fetchClientes,
+        queryFn: fetchClientes,  
+        staleTime: 1000 * 60 * 10
+    });
+
+    // Query de Regiões (Correta)
+    const { data: regioes = [], isLoading: isLoadingRegioes } = useQuery({ 
+        queryKey: ['regioes'], 
+        queryFn: fetchRegioes,
         staleTime: 1000 * 60 * 10 
     });
 
-    // --- NOVA QUERY PARA BUSCAR PLACAS ---
+    // Query de Placas (Buscar TODAS 1x)
     const { data: placasData = [], isLoading: isLoadingPlacas } = useQuery({
-        queryKey: ['placas'], // Cache de placas
-        queryFn: fetchPlacas, // Função da sua api.js
-        staleTime: 1000 * 60 * 10
+        queryKey: ['placas', 'all'], 
+        queryFn: () => fetchPlacas(new URLSearchParams({ limit: 1000 })), 
+        staleTime: 1000 * 60 * 10,
+        select: (data) => data.data ?? [], 
+        placeholderData: { data: [] }      
     });
-    // ------------------------------------
 
     const {
         register,
@@ -43,19 +71,20 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
             descricao: initialData.descricao || '',
             responsavel: initialData.cliente?.responsavel || '',
             segmento: initialData.cliente?.segmento || '',
-            // --- CAMPOS NOVOS ADICIONADOS ---
             formaPagamento: initialData.formaPagamento || '',
-            placas: initialData.placas || [] // Espera um array de IDs
+            placas: initialData.placas?.map(p => p._id || p) || []
         }
     });
 
-    // Formata data da API (ISOString) para o input (YYYY-MM-DD)
+    // Observa o campo 'placas' (array de IDs)
+    const watchedPlacas = watch('placas') || [];
+
     function formatDateForInput(isoDate) {
         if (!isoDate) return '';
         return new Date(isoDate).toISOString().split('T')[0];
     }
     
-    // Reseta o form se o initialData mudar (quando abre o modal para edição)
+    // Efeito para resetar o form
     useEffect(() => {
         const cliente = initialData.cliente || {};
         reset({
@@ -67,23 +96,18 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
             descricao: initialData.descricao || '',
             responsavel: cliente.responsavel || '',
             segmento: cliente.segmento || '',
-            // --- CAMPOS NOVOS ADICIONADOS ---
             formaPagamento: initialData.formaPagamento || '',
-            // Garante que o valor seja um array de IDs, 
-            // mesmo que 'initialData.placas' venha como objetos populados
             placas: initialData.placas?.map(p => p._id || p) || []
         });
+        setSelectedRegiao('');
+        setPlacaSearch('');
     }, [initialData, reset]);
 
-    const dataInicio = watch('dataInicio');
-    
-    // --- LÓGICA DE PREENCHIMENTO AUTOMÁTICO (Cliente) ---
+    // Efeito para auto-preencher dados do cliente
     const watchedClienteId = watch('clienteId');
-
     useEffect(() => {
         if (watchedClienteId && clientes.length > 0) {
             const clienteSelecionado = clientes.find(c => c._id === watchedClienteId);
-            
             if (clienteSelecionado) {
                 setValue('responsavel', clienteSelecionado.responsavel || '', { shouldValidate: false });
                 setValue('segmento', clienteSelecionado.segmento || '', { shouldValidate: false });
@@ -93,23 +117,78 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
             setValue('segmento', '', { shouldValidate: false });
         }
     }, [watchedClienteId, clientes, setValue]);
-    // ------------------------------------------
 
+    const dataInicio = watch('dataInicio');
+    
     const handleFormSubmit = (data) => {
-        // Remove os campos de visualização (responsavel, segmento)
-        // Os campos 'placas' e 'formaPagamento' SÃO MANTIDOS e enviados
         const { responsavel, segmento, ...piData } = data;
-        onSubmit(piData, setModalError); // Passa dados corretos para a API
+        onSubmit(piData, setModalError); 
     };
 
+
+    // --- LÓGICA DE FILTRAGEM LOCAL (CORRIGIDA) ---
+
+    // 1. Lista de Placas DISPONÍVEIS (filtrada)
+    const availablePlacas = useMemo(() => {
+        const search = debouncedPlacaSearch.toLowerCase();
+        
+        return placasData.filter(placa => {
+            // 1. Não pode estar na lista de selecionadas
+            if (watchedPlacas.includes(placa._id)) {
+                return false;
+            }
+            
+            // --- CORREÇÃO 2: VERIFICA 'null' ---
+            // 2. Verifica a região
+            const regiaoId = (typeof placa.regiao === 'object' && placa.regiao !== null) 
+                ? placa.regiao._id 
+                : placa.regiao; // Agora 'regiaoId' pode ser null, string, ou undefined
+            // ------------------------------------
+            
+            const matchesRegiao = !selectedRegiao || (regiaoId === selectedRegiao);
+
+            // 3. Verifica a pesquisa
+            const matchesSearch = !search || (placa.numero_placa && placa.numero_placa.toLowerCase().includes(search));
+            
+            return matchesRegiao && matchesSearch;
+        });
+    }, [placasData, selectedRegiao, debouncedPlacaSearch, watchedPlacas]);
+
+    // 2. Lista de Placas SELECIONADAS (objetos completos)
+    const selectedPlacasObjects = useMemo(() => {
+        const allPlacasMap = new Map(placasData.map(p => [p._id, p]));
+        return watchedPlacas
+            .map(id => allPlacasMap.get(id))
+            .filter(Boolean); // Filtra IDs que não foram encontrados (segurança)
+    }, [watchedPlacas, placasData]);
+
+    // --- HANDLERS DE SELEÇÃO (CORRIGIDOS) ---
+    const handleSelectPlaca = (placaId) => { 
+        setValue('placas', [...watchedPlacas, placaId], { shouldValidate: true });
+    };
+
+    const handleRemovePlaca = (placaId) => { 
+        setValue('placas', watchedPlacas.filter(id => id !== placaId), { shouldValidate: true });
+    };
+    // -----------------------------------
+
+    
+    // Função helper para pegar o nome da região (usada nas duas listas)
+    const getRegiaoNome = (placa) => {
+        if (!placa.regiao) return 'Sem região';
+        const regiaoId = (typeof placa.regiao === 'object' && placa.regiao !== null) ? placa.regiao._id : placa.regiao;
+        const reg = regioes.find(r => r._id === regiaoId);
+        return reg ? reg.nome : 'Sem região';
+    };
+
+
     return (
-        // Usamos os estilos genéricos de modal-form
         <form id="pi-form" className="modal-form" onSubmit={handleSubmit(handleFormSubmit)} noValidate>
             <div className="modal-form__grid">
                 
                 {/* Cliente */}
                 <div className="modal-form__input-group modal-form__input-group--full">
-                    <label htmlFor="clienteId">Cliente</label>
+                     <label htmlFor="clienteId">Cliente</label>
                     <select id="clienteId"
                            className={`modal-form__input ${modalErrors.clienteId ? 'input-error' : ''}`}
                            {...register('clienteId', { required: 'O cliente é obrigatório.' })}
@@ -126,7 +205,7 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
                     <input type="text" id="responsavel"
                            className="modal-form__input"
                            {...register('responsavel')}
-                           disabled // Este campo é apenas para visualização
+                           disabled 
                     />
                 </div>
 
@@ -136,17 +215,17 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
                     <input type="text" id="segmento"
                            className="modal-form__input"
                            {...register('segmento')}
-                           disabled // Este campo é apenas para visualização
+                           disabled 
                     />
                 </div>
                 
-                {/* --- CAMPO NOVO: FORMA DE PAGAMENTO --- */}
+                {/* Forma de Pagamento */}
                 <div className="modal-form__input-group modal-form__input-group--full">
                     <label htmlFor="formaPagamento">Forma de Pagamento</label>
                     <input type="text" id="formaPagamento"
                            placeholder="Ex: 30/60 dias, Ato, PIX na instalação"
                            className={`modal-form__input ${modalErrors.formaPagamento ? 'input-error' : ''}`}
-                           {...register('formaPagamento')} // Validação é opcional (Etapa 6)
+                           {...register('formaPagamento')} 
                            disabled={isSubmitting} />
                     {modalErrors.formaPagamento && <div className="modal-form__error-message">{modalErrors.formaPagamento.message}</div>}
                 </div>
@@ -199,31 +278,96 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
                            disabled={isSubmitting} />
                     {modalErrors.dataFim && <div className="modal-form__error-message">{modalErrors.dataFim.message}</div>}
                 </div>
-
-                {/* --- CAMPO NOVO: SELETOR DE PLACAS --- */}
+                
+                {/* --- GRUPO DE SELEÇÃO DE PLACAS (MODIFICADO) --- */}
                 <div className="modal-form__input-group modal-form__input-group--full">
-                    <label htmlFor="placas">Placas Selecionadas</label>
-                    <select id="placas"
-                            multiple // Permite seleção múltipla
-                            size="6" // Define a altura da caixa de seleção
-                            className={`modal-form__input ${modalErrors.placas ? 'input-error' : ''}`}
-                            {...register('placas')} // O 'react-hook-form' trata o 'multiple' automaticamente
-                            disabled={isSubmitting || isLoadingPlacas}
-                    >
+                    
+                    {/* 1. Campo de Placas Selecionadas */}
+                    <label>Placas Selecionadas ({selectedPlacasObjects.length})</label>
+                    <div className="modal-form__selected-list">
                         {isLoadingPlacas ? (
-                            <option value="" disabled>A carregar placas...</option>
+                            <span className="modal-form__selected-empty">A carregar...</span>
+                        ) : selectedPlacasObjects.length === 0 ? (
+                            <span className="modal-form__selected-empty">Nenhuma placa selecionada.</span>
                         ) : (
-                            placasData.map(placa => (
-                                <option key={placa._id} value={placa._id}>
-                                    {placa.codigo} - {placa.regiao?.nome || 'Sem região'}
-                                </option>
+                            selectedPlacasObjects.map(placa => (
+                                <div key={placa._id} className="modal-form__selected-item">
+                                    <span>
+                                        {placa.numero_placa || `ID ${placa._id}`} - {getRegiaoNome(placa)}
+                                    </span>
+                                    <button 
+                                        type="button" 
+                                        className="modal-form__selected-remove-btn" 
+                                        onClick={() => handleRemovePlaca(placa._id)} // <<< CORREÇÃO 1
+                                        title="Remover"
+                                        disabled={isSubmitting}
+                                    >
+                                        <i className="fas fa-trash"></i>
+                                    </button>
+                                </div>
                             ))
                         )}
-                    </select>
-                    <small className="modal-form__helper-text">Segure Ctrl (ou Cmd no Mac) para selecionar várias placas.</small>
-                    {modalErrors.placas && <div className="modal-form__error-message">{modalErrors.placas.message}</div>}
-                    {modalErrors.placas?.root && <div className="modal-form__error-message">{modalErrors.placas.root.message}</div>}
+                    </div>
                 </div>
+
+                <div className="modal-form__input-group modal-form__input-group--full modal-form__multi-select-wrapper">
+                    {/* 2. Campo de Placas Disponíveis (com filtros) */}
+                    <label>Placas Disponíveis</label>
+                    
+                    {/* Filtro de Região (Cidade) */}
+                    <select 
+                        id="regiao-filtro"
+                        className="modal-form__input"
+                        value={selectedRegiao} 
+                        onChange={(e) => setSelectedRegiao(e.target.value)} 
+                        disabled={isSubmitting || isLoadingRegioes}
+                    >
+                        <option value="">{isLoadingRegioes ? 'A carregar...' : 'Filtrar por Região'}</option>
+                        {regioes.map(r => <option key={r._id} value={r._id}>{r.nome}</option>)}
+                    </select>
+
+                    {/* Filtro de Busca (Número da Placa) */}
+                    <input 
+                        type="text"
+                        className="modal-form__input"
+                        placeholder="Pesquisar por número da placa..."
+                        value={placaSearch}
+                        onChange={(e) => setPlacaSearch(e.target.value)}
+                        disabled={isSubmitting || isLoadingPlacas}
+                    />
+                    
+                    {/* Lista de Placas Disponíveis (para clicar) */}
+                    <div id="placas-list" className="modal-form__multi-select-list" tabIndex={0}>
+                        {isLoadingPlacas ? (
+                            <div className="modal-form__multi-select-option">A carregar placas...</div>
+                        ) : (
+                            availablePlacas.map(placa => (
+                                <div 
+                                    key={placa._id}
+                                    className="modal-form__multi-select-option"
+                                    onClick={() => handleSelectPlaca(placa._id)} // <<< CORREÇÃO 1
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSelectPlaca(placa._id)}
+                                    tabIndex={0}
+                                >
+                                    {placa.numero_placa || `ID ${placa._id}`} - {getRegiaoNome(placa)}
+                                </div>
+                            ))
+                        )}
+                        {/* Mensagem se não houver resultados */}
+                        {!isLoadingPlacas && availablePlacas.length === 0 && (
+                             <div className="modal-form__multi-select-option">
+                                {debouncedPlacaSearch || selectedRegiao
+                                    ? 'Nenhuma placa encontrada com estes filtros.'
+                                    : 'Nenhuma placa disponível (ou todas já selecionadas).'
+                                }
+                            </div>
+                        )}
+                    </div>
+                    {/* (O input hidden 'placas' é registrado, mas não precisamos dele visível) */}
+                    <input type="hidden" {...register('placas')} /> 
+                    {modalErrors.placas && <div className="modal-form__error-message">{modalErrors.placas.message}</div>}
+                </div>
+                {/* --- FIM DO GRUPO DE PLACAS --- */}
 
 
                 {/* Descrição */}
@@ -242,8 +386,10 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
                 <button type="button" className="modal-form__button modal-form__button--cancel" onClick={onClose} disabled={isSubmitting}>
                     Cancelar
                 </button>
-                {/* --- ALTERAÇÃO AQUI --- (Desabilita se estiver a carregar placas) */}
-                <button type="submit" className="modal-form__button modal-form__button--confirm" disabled={isSubmitting || isLoadingClientes || isLoadingPlacas}>
+                <button 
+                    type="submit" 
+                    className="modal-form__button modal-form__button--confirm" 
+                    disabled={isSubmitting || isLoadingClientes || isLoadingPlacas || isLoadingRegioes}>
                     {isSubmitting ? 'A guardar...' : 'Guardar PI'}
                 </button>
             </div>

@@ -179,3 +179,157 @@
 .modal-form__button--confirm:hover:not(:disabled) {
      background-color: #1a9c4a; /* Verde mais escuro */
 }
+
+/* ... (estilos existentes de .modal, .modal__content, .modal-form__input-group, etc.) ... */
+
+
+/* --- Estilos para o Seletor Múltiplo Customizado (Adicionar ao final) --- */
+.modal-form__multi-select-wrapper {
+    /* Este grupo não precisa de 'margin-bottom' pois os inputs internos já dão o 'gap' */
+    margin-bottom: 0; 
+}
+
+.modal-form__multi-select-wrapper label {
+    /* Sobrescreve o estilo da label para ficar alinhada com os outros campos */
+    margin-bottom: 0; 
+}
+
+.modal-form__multi-select-list {
+    background-color: var(--bg-color);
+    border: 1px solid var(--input-border);
+    border-radius: 1rem;
+    padding: 0.5rem;
+    height: 15rem; /* Altura fixa (similar ao size="6") */
+    overflow-y: auto;
+    font-size: 1.4rem; /* Tamanho de fonte menor para as opções */
+    margin-top: 0.8rem; /* Espaço após o input de busca */
+}
+
+/* Destaque no foco (acessibilidade) */
+.modal-form__multi-select-list:focus-within {
+     border-color: var(--accent-green);
+}
+
+.modal-form__multi-select-option {
+    padding: 1rem 1.2rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-color); /* Garante a cor do texto padrão */
+}
+
+.modal-form__multi-select-option:hover {
+    background-color: var(--sidebar-active-bg);
+}
+
+/* Estilo da opção selecionada */
+.modal-form__multi-select-option--selected {
+    background-color: var(--accent-green);
+    color: white;
+    font-weight: 500;
+}
+
+.modal-form__multi-select-option--selected:hover {
+    background-color: #1a9c4a; /* Verde mais escuro */
+}
+
+/* --- Fim dos estilos customizados --- */
+
+.modal-form__multi-select-wrapper {
+    margin-bottom: 0; 
+}
+.modal-form__multi-select-wrapper label {
+    margin-bottom: 0; 
+}
+
+/* Lista de Placas DISPONÍVEIS */
+.modal-form__multi-select-list {
+    background-color: var(--bg-color);
+    border: 1px solid var(--input-border);
+    border-radius: 1rem;
+    padding: 0.5rem;
+    height: 15rem; /* Altura fixa */
+    overflow-y: auto;
+    font-size: 1.4rem; 
+    margin-top: 0.8rem; 
+}
+.modal-form__multi-select-list:focus-within {
+     border-color: var(--accent-green);
+}
+.modal-form__multi-select-option {
+    padding: 1rem 1.2rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-color); 
+}
+.modal-form__multi-select-option:hover {
+    background-color: var(--sidebar-active-bg);
+}
+/* (Fim dos estilos da lista disponível) */
+
+
+/* --- NOVOS ESTILOS: Lista de Placas SELECIONADAS --- */
+.modal-form__selected-list {
+    background-color: var(--bg-color);
+    border: 1px solid var(--input-border);
+    border-radius: 1rem;
+    padding: 0.8rem;
+    min-height: 4rem; /* Altura mínima */
+    max-height: 12rem; /* Altura máxima antes de rolar */
+    overflow-y: auto;
+    margin-top: 0.8rem; /* Espaço abaixo da label "Placas Selecionadas" */
+    margin-bottom: 1.5rem; /* Espaço antes da "Placas Disponíveis" */
+}
+
+.modal-form__selected-empty {
+    display: block;
+    padding: 0.5rem 0.5rem;
+    color: var(--text-color-light);
+    font-style: italic;
+    font-size: 1.3rem;
+}
+
+.modal-form__selected-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--sidebar-active-bg);
+    color: var(--text-color);
+    font-size: 1.4rem;
+    padding: 0.8rem 1.2rem;
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem; /* Espaço entre itens */
+}
+.modal-form__selected-item:last-child {
+    margin-bottom: 0;
+}
+
+.modal-form__selected-item span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 1rem;
+}
+
+.modal-form__selected-remove-btn {
+    background: none;
+    border: none;
+    color: var(--accent-red);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.3rem;
+    line-height: 1;
+    transition: background-color 0.2s ease;
+}
+.modal-form__selected-remove-btn:hover {
+    background-color: rgba(244, 67, 54, 0.1); /* Fundo vermelho suave */
+}
+/* --- Fim dos novos estilos --- */
