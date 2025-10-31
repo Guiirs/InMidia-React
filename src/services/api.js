@@ -42,15 +42,21 @@ apiClient.interceptors.request.use(
   }
 );
 
+
+// --- [CORREÇÃO APLICADA AQUI] ---
+// O interceptor de resposta foi atualizado para preservar o objeto de erro completo
+// (incluindo `error.response.data.errors`) para o React Query.
 apiClient.interceptors.response.use(
   (response) => {
+    // Sucesso, apenas retorna a resposta
     return response;
   },
-  (error) => {
+  async (error) => { // Tornamos a função async
     if (error.response) {
       const { status, data } = error.response;
       if (import.meta.env.DEV) console.error(`[API Interceptor Res] Erro ${status}:`, data);
 
+      // Lógica 401 (inalterada)
       if (status === 401) {
         if (import.meta.env.DEV) console.warn('[API Interceptor Res] Erro 401 - Limpando token e redirecionando para login.');
         localStorage.removeItem('token');
@@ -61,30 +67,37 @@ apiClient.interceptors.response.use(
         return Promise.reject(new Error('Sessão expirada. Faça login novamente.'));
       }
       
-      // [CORREÇÃO PDF] Se a resposta de erro for um blob, tenta decodificar
-      if (data instanceof Blob && data.type === "application/json") {
-          return new Promise((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => {
-                  try {
-                      const errorData = JSON.parse(reader.result);
-                      const errorMessage = errorData?.message || 'Erro ao processar o arquivo.';
-                      if (import.meta.env.DEV) console.error(`[API Interceptor Res] Erro ${status} (Blob):`, errorData);
-                      reject(new Error(errorMessage));
-                  } catch (e) {
-                      reject(new Error('Erro indefinido do servidor (Blob).'));
-                  }
-              };
-              reader.onerror = () => {
-                  reject(new Error('Erro ao ler a resposta de erro (Blob).'));
-              };
-              reader.readAsText(data);
-          });
-      }
-      // --- Fim da correção PDF ---
+      let errorMessage = 'Ocorreu um erro desconhecido.';
+      let errorData = data; // Assume que 'data' é o objeto JSON
 
-      const errorMessage = data?.message || error.message || `Erro ${status}`;
-      return Promise.reject(new Error(errorMessage));
+      // Lógica de Blob (Corrigida para ser assíncrona)
+      if (data instanceof Blob && (data.type === "application/json" || data.type === "application/pdf")) {
+        try {
+          const errorText = await data.text();
+          // Tenta decodificar o JSON do blob de erro
+          if (data.type === "application/json") {
+             errorData = JSON.parse(errorText);
+             errorMessage = errorData?.message || 'Erro ao processar o arquivo.';
+          } else {
+             // Se for um PDF que deu erro, pode não ser JSON
+             errorMessage = "Erro ao gerar PDF (Blob recebido).";
+          }
+          if (import.meta.env.DEV) console.error(`[API Interceptor Res] Erro ${status} (Blob Decodificado):`, errorData);
+        } catch (e) {
+          errorMessage = 'Erro ao ler a resposta de erro (Blob).';
+        }
+      } else if (data) {
+        errorMessage = data?.message || error.message || `Erro ${status}`;
+      }
+      
+      // [A CORREÇÃO PRINCIPAL]
+      // Criamos um novo erro, mas anexamos a RESPOSTA COMPLETA
+      // para que o React Query possa aceder a error.response.data.errors
+      const enhancedError = new Error(errorMessage);
+      enhancedError.response = error.response; // Anexa a resposta original
+      enhancedError.response.data = errorData; // Garante que a 'data' (seja JSON ou o Blob decodificado) esteja lá
+      
+      return Promise.reject(enhancedError); // Rejeita com o erro melhorado
 
     } else if (error.request) {
       if (import.meta.env.DEV) console.error('[API Interceptor Res] Sem resposta do servidor:', error.request);
@@ -95,10 +108,11 @@ apiClient.interceptors.response.use(
     }
   }
 );
+// --- [FIM DA CORREÇÃO] ---
 
 
 // -----------------------------------------------------------------------------
-// Funções da API Exportadas
+// Funções da API Exportadas (Inalteradas)
 // -----------------------------------------------------------------------------
 
 // --- ROTAS PÚBLICAS ---
@@ -416,12 +430,6 @@ export const fetchDashboardSummary = async () => {
     }
 };
 
-/**
- * Busca o relatório de ocupação por período.
- * @param {string} data_inicio - Data de início (YYYY-MM-DD)
- * @param {string} data_fim - Data de fim (YYYY-MM-DD)
- * @returns {Promise<object>} - Dados do relatório.
- */
 export const fetchRelatorioOcupacao = async (data_inicio, data_fim) => {
     try {
         const params = new URLSearchParams({ data_inicio, data_fim });
@@ -433,18 +441,10 @@ export const fetchRelatorioOcupacao = async (data_inicio, data_fim) => {
     }
 };
 
-/**
- * [NOVA FUNÇÃO - CORREÇÃO PDF]
- * Solicita o download do relatório de ocupação em PDF.
- * @param {string} data_inicio - Data de início (YYYY-MM-DD)
- * @param {string} data_fim - Data de fim (YYYY-MM-DD)
- * @returns {Promise<{blob: Blob, filename: string}>} - O arquivo PDF como um Blob e o nome do arquivo.
- */
 export const downloadRelatorioOcupacaoPDF = async (data_inicio, data_fim) => {
     try {
         const params = new URLSearchParams({ data_inicio, data_fim });
         
-        // A chave é 'responseType: blob' para que o Axios trate a resposta como um arquivo
         const response = await apiClient.get(
             `/relatorios/export/ocupacao-por-periodo?${params.toString()}`,
             {
@@ -452,27 +452,161 @@ export const downloadRelatorioOcupacaoPDF = async (data_inicio, data_fim) => {
             }
         );
         
-        // Retorna o blob e o nome do arquivo (se o backend enviar)
         return {
             blob: response.data,
-            // Tenta extrair o nome do arquivo do header Content-Disposition
             filename: response.headers['content-disposition']
                 ?.split('filename=')[1]
                 ?.replace(/"/g, '') || 'relatorio_ocupacao.pdf'
         };
 
     } catch (error) {
-        // Se o erro for um blob, significa que a API retornou um erro JSON
-        // (que o axios tentou ler como blob). Precisamos convertê-lo.
         if (error.response && error.response.data instanceof Blob) {
              try {
                 const errorJson = JSON.parse(await error.response.data.text());
                 throw new Error(errorJson.message || 'Erro ao gerar PDF');
              } catch(e) {
-                throw error; // Lança o erro original se a conversão falhar
+                throw error;
              }
         }
         if (import.meta.env.DEV) console.error('[API downloadRelatorioOcupacaoPDF] Erro:', error);
+        throw error;
+    }
+};
+
+// --- [NOVO] Rotas de Propostas Internas (PIs) ---
+
+/**
+ * Busca a lista paginada de PIs.
+ * @param {URLSearchParams} params - Parâmetros de query (page, limit, status, clienteId).
+ * @returns {Promise<object>} - Objeto com { data: Array<PI>, pagination: object }.
+ */
+export const fetchPIs = async (params) => {
+    try {
+        const response = await apiClient.get(`/pis?${params.toString()}`);
+        return response.data;
+    } catch (error) {
+        if (import.meta.env.DEV) console.error('[API fetchPIs] Erro:', error);
+        throw error;
+    }
+};
+
+/**
+ * Cria uma nova Proposta Interna (PI).
+ * @param {object} piData - Dados da PI (clienteId, tipoPeriodo, datas, valor, etc.).
+ * @returns {Promise<object>} - A nova PI criada.
+ */
+export const createPI = async (piData) => {
+    try {
+        const response = await apiClient.post('/pis', piData);
+        return response.data;
+    } catch (error) {
+        if (import.meta.env.DEV) console.error('[API createPI] Erro:', error);
+        throw error;
+    }
+};
+
+/**
+ * Atualiza uma Proposta Interna (PI).
+ * @param {string} id - ID da PI.
+ * @param {object} piData - Dados da PI a atualizar.
+ * @returns {Promise<object>} - A PI atualizada.
+ */
+export const updatePI = async (id, piData) => {
+    try {
+        const response = await apiClient.put(`/pis/${id}`, piData);
+        return response.data;
+    } catch (error) {
+        if (import.meta.env.DEV) console.error(`[API updatePI ${id}] Erro:`, error);
+        throw error;
+    }
+};
+
+/**
+ * Apaga uma Proposta Interna (PI).
+ * @param {string} id - ID da PI.
+ * @returns {Promise<void>}
+ */
+export const deletePI = async (id) => {
+    try {
+        await apiClient.delete(`/pis/${id}`);
+    } catch (error) {
+        if (import.meta.env.DEV) console.error(`[API deletePI ${id}] Erro:`, error);
+        throw error;
+    }
+};
+
+/**
+ * Solicita o download do PDF da PI.
+ * @param {string} id - ID da PI.
+ * @returns {Promise<{blob: Blob, filename: string}>} - O arquivo PDF.
+ */
+export const downloadPI_PDF = async (id) => {
+    try {
+        const response = await apiClient.get(`/pis/${id}/download`, {
+            responseType: 'blob' 
+        });
+        return {
+            blob: response.data,
+            filename: response.headers['content-disposition']
+                ?.split('filename=')[1]
+                ?.replace(/"/g, '') || `PI_${id}.pdf`
+        };
+    } catch (error) {
+        // Lógica de tratamento de erro de blob
+        if (error.response && error.response.data instanceof Blob) {
+             try {
+                const errorJson = JSON.parse(await error.response.data.text());
+                throw new Error(errorJson.message || 'Erro ao gerar PDF da PI');
+             } catch(e) { throw error; }
+        }
+        if (import.meta.env.DEV) console.error(`[API downloadPI_PDF ${id}] Erro:`, error);
+        throw error;
+    }
+};
+
+
+// --- [NOVO] Rotas de Contratos ---
+
+/**
+ * Cria um Contrato a partir de uma PI.
+ * @param {string} piId - ID da Proposta Interna.
+ * @returns {Promise<object>} - O novo Contrato criado.
+ */
+export const createContrato = async (piId) => {
+    try {
+        const response = await apiClient.post('/contratos', { piId });
+        return response.data;
+    } catch (error) {
+        if (import.meta.env.DEV) console.error('[API createContrato] Erro:', error);
+        throw error;
+    }
+};
+
+/**
+ * Solicita o download do PDF do Contrato.
+ * @param {string} id - ID do Contrato.
+ * @returns {Promise<{blob: Blob, filename: string}>} - O arquivo PDF.
+ */
+export const downloadContrato_PDF = async (id) => {
+    try {
+        const response = await apiClient.get(`/contratos/${id}/download`, {
+            responseType: 'blob' 
+        });
+        return {
+            blob: response.data,
+            filename: response.headers['content-disposition']
+                ?.split('filename=')[1]
+                ?.replace(/"/g, '') || `Contrato_${id}.pdf`
+        };
+    } catch (error) {
+        // Lógica de tratamento de erro de blob
+        if (error.response && error.response.data instanceof Blob) {
+             try {
+                const errorJson = JSON.parse(await error.response.data.text());
+                throw new Error(errorJson.message || 'Erro ao gerar PDF do Contrato');
+             } catch(e) { throw error; }
+        }
+        if (import.meta.env.DEV) console.error(`[API downloadContrato_PDF ${id}] Erro:`, error);
         throw error;
     }
 };

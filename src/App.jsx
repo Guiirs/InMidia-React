@@ -27,29 +27,31 @@ const RegioesPage = lazy(() => import('./pages/Regioes/RegioesPage'));
 const MapPage = lazy(() => import('./pages/Map/MapPage'));
 const RelatoriosPage = lazy(() => import('./pages/Relatorios/RelatoriosPage'));
 const UserPage = lazy(() => import('./pages/User/UserPage'));
-const EmpresaSettingsPage = lazy(() => import('./pages/Empresa/EmpresaSettingsPage'));
-const AdminUsersPage = lazy(() => import('./pages/Admin/AdminUsersPage'));
 const PlacaFormPage = lazy(() => import('./pages/PlacaFormPage/PlacaFormPage'));
 const PlacaDetailsPage = lazy(() => import('./pages/PlacaDetailsPage/PlacaDetailsPage'));
 const RegisterPage = lazy(() => import('./pages/Register/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPassword/ForgotPasswordPage'));
+const AdminUsersPage = lazy(() => import('./pages/Admin/AdminUsersPage'));
+const PIsPage = lazy(() => import('./pages/PIs/PIsPage'));
+
+// [MELHORIA] Importa o layout da página Empresa e as novas sub-páginas
+const EmpresaSettingsPage = lazy(() => import('./pages/Empresa/EmpresaSettingsPage'));
+const EmpresaDetalhes = lazy(() => import('./pages/Empresa/subpages/EmpresaDetalhes'));
+const EmpresaApiKey = lazy(() => import('./pages/Empresa/subpages/EmpresaApiKey'));
+
 
 function App() {
   return (
     <> 
       <Suspense fallback={<FullPageSpinner />}>
         <Routes>
-          {/* === ROTA PÚBLICA NA RAIZ (AGORA REDIRECIONA) === */}
-          {/* Redireciona a raiz / para a página de status */}
+          {/* ... (Rotas públicas: /status, /login, etc.) ... */}
           <Route path="/" element={<Navigate to="/status" replace />} /> 
-
-          {/* === ROTA PÚBLICA DE STATUS (NOVO CAMINHO) === */}
           <Route path="/status" element={<ApiStatusPage />} />
-
-          {/* === OUTRAS ROTAS PÚBLICAS === */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/empresa-register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
 
           {/* === ROTAS PRIVADAS === */}
           <Route element={<ProtectedRoute />}>
@@ -64,14 +66,27 @@ function App() {
               <Route path="/map" element={<MapPage />} />
               <Route path="/relatorios" element={<RelatoriosPage />} />
               <Route path="/user" element={<UserPage />} />
-              <Route path="/empresa-settings" element={<EmpresaSettingsPage />} />
               
+              {/* [MELHORIA] Rotas Aninhadas de Empresa */}
+              <Route path="/empresa-settings" element={<EmpresaSettingsPage />}>
+                {/* Rota padrão (aba Detalhes) */}
+                <Route index element={<Navigate to="detalhes" replace />} />
+                <Route path="detalhes" element={<EmpresaDetalhes />} />
+                
+                {/* Rota da API (só renderiza se for Admin) */}
+                <Route element={<AdminRoute />}>
+                  <Route path="api" element={<EmpresaApiKey />} />
+                </Route>
+              </Route>
+              
+              {/* Rota de Gestão (PIs) - (Mantém-se separada, como definido no hub) */}
+              <Route path="/propostas" element={<PIsPage />} />
+              
+              {/* Rotas de Admin */}
               <Route element={<AdminRoute />}>
                  <Route path="/admin-users" element={<AdminUsersPage />} />
               </Route>
               
-              {/* O redirect da raiz (/) foi removido daqui */}
-
             </Route> {/* Fim do MainLayout */}
           </Route> {/* Fim do ProtectedRoute */}
 

@@ -1,20 +1,31 @@
 // src/components/Sidebar/Sidebar.jsx
 import React, { useState, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+// [MELHORIA] Importamos useLocation para verificar a rota
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useConfirmation } from '../../context/ConfirmationContext'; // <<< 1. Importar o hook
+import { useConfirmation } from '../../context/ConfirmationContext';
 import './Sidebar.css';
 
 function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const showConfirmation = useConfirmation(); // <<< 2. Inicializar o hook
+  const showConfirmation = useConfirmation();
   const userIsAdmin = user?.role === 'admin';
+  
+  // [MELHORIA] Pega a localização atual
+  const location = useLocation();
 
-  // --- Lógica do Tema (Inalterada) ---
+  // [MELHORIA] Função para checar se o link "Empresa" ou seus filhos estão ativos
+  // (Verifica /empresa-settings, /propostas, ou /contratos)
+  const isEmpresaActive = () => {
+      return location.pathname.startsWith('/empresa-settings') ||
+             location.pathname.startsWith('/propostas') ||
+             location.pathname.startsWith('/contratos');
+  };
+
+  // --- Lógica do Tema (Inalterada do seu arquivo original) ---
   const [theme, setTheme] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
-    // Aplica o tema ao body imediatamente na inicialização
     if (savedTheme) {
         document.body.classList.toggle('light-theme', savedTheme === 'light');
     }
@@ -22,7 +33,7 @@ function Sidebar() {
   });
 
   useEffect(() => {
-    document.body.classList.remove('light-theme'); // Limpa
+    document.body.classList.remove('light-theme');
     if (theme === 'light') {
         document.body.classList.add('light-theme');
     }
@@ -35,37 +46,30 @@ function Sidebar() {
   const themeIconClass = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
   // --- Fim da Lógica do Tema ---
 
-
-  // --- Refinamento 5: handleLogout atualizado ---
+  // --- Lógica do Logout (Inalterada do seu arquivo original) ---
   const handleLogout = async (e) => {
     e.preventDefault();
-    
     try {
-      // 3. Chamar o modal de confirmação e aguardar
       await showConfirmation({
         message: 'Tem a certeza de que deseja sair da sua conta?',
         title: 'Confirmar Logout',
         confirmText: 'Sair',
         cancelText: 'Cancelar',
-        confirmButtonType: 'red', // Botão vermelho para ação de sair
+        confirmButtonType: 'red',
       });
-      
-      // 4. Se o utilizador confirmou (a promessa resolveu):
       logout();
       navigate('/login', { replace: true });
-
     } catch (error) {
-      // 5. Se o utilizador cancelou (a promessa foi rejeitada)
       if (error.message === "Ação cancelada pelo usuário.") {
          console.log("Logout cancelado.");
       } else {
-         // Lidar com outros erros inesperados do modal, se houver
          console.error("Erro no modal de confirmação:", error);
       }
     }
   };
   
   return (
+    // [ESTRUTURA ORIGINAL MANTIDA]
     <aside className="sidebar">
       <div className="sidebar__header">
         <NavLink to="/dashboard" className="sidebar__logo-container" data-link>
@@ -90,7 +94,17 @@ function Sidebar() {
 
       <div className="sidebar__footer">
         <NavLink to="/user" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-user"></i> <span>Meu Perfil</span></NavLink>
-        <NavLink to="/empresa-settings" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-cog"></i> <span>Empresa</span></NavLink>
+        
+        {/* [MELHORIA APLICADA AQUI] */}
+        <NavLink 
+          to="/empresa-settings" 
+          // Usa a função 'isEmpresaActive' para determinar se o link (ou seus filhos) estão ativos
+          className={`sidebar__nav-link ${isEmpresaActive() ? 'sidebar__nav-link--active' : ''}`} 
+          data-link
+        >
+          <i className="fas fa-cog"></i> <span>Empresa</span>
+        </NavLink>
+        
         <div className="sidebar__theme-switcher">
           <i className={themeIconClass}></i>
           <span>Modo Claro</span>
