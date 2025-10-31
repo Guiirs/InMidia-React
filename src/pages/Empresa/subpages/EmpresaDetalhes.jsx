@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { getEmpresaDetails, updateEmpresaDetails } from '../../../services/api';
 import { useToast } from '../../../components/ToastNotification/ToastNotification';
 import Spinner from '../../../components/Spinner/Spinner';
+import '../EmpresaSettings.css'; // <-- CORREÇÃO APLICADA AQUI
 
 function EmpresaDetalhes() {
     const showToast = useToast();
