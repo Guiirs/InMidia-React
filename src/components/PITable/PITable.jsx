@@ -33,27 +33,34 @@ function PITable({
         <tbody>
             {pis.map(pi => {
                 // Controla o estado de loading por linha
-                const isThisOneDeleting = isDeleting && isDeleting.piId === pi.id;
-                const isThisOneDownloading = isDownloading && isDownloading.piId === pi.id;
-                const isThisOneCreatingContrato = isCreatingContrato && isCreatingContrato.piId === pi.id;
+                const isThisOneDeleting = isDeleting && isDeleting.piId === pi._id;
+                const isThisOneDownloading = isDownloading && isDownloading.piId === pi._id;
+                const isThisOneCreatingContrato = isCreatingContrato && isCreatingContrato.piId === pi._id;
                 
                 // Desabilita todas as ações na linha se uma estiver em progresso
                 const disableActions = isThisOneDeleting || isThisOneDownloading || isThisOneCreatingContrato;
 
                 return (
-                    <tr key={pi.id}>
-                        {/* Usamos '?' para evitar crashar se o cliente for apagado */}
+                    <tr key={pi._id}>
+                        {/* 'pi.cliente' é populado com 'nome' pelo 'getAll' */}
                         <td>{pi.cliente?.nome || 'Cliente Apagado'}</td>
                         <td>{pi.tipoPeriodo === 'quinzenal' ? 'Quinzenal' : 'Mensal'}</td>
                         <td>{formatDate(pi.dataInicio)}</td>
                         <td>{formatDate(pi.dataFim)}</td>
                         <td>R$ {pi.valorTotal.toFixed(2)}</td>
+
+                        {/* --- ALTERAÇÃO AQUI --- (Novas colunas) */}
+                        {/* 'pi.placas' é um array de IDs, graças à correção no piService */}
+                        <td>{pi.placas?.length || 0}</td>
+                        <td>{pi.formaPagamento || '-'}</td>
+                        {/* ------------------------------- */}
+
                         <td>
                             <span className={`status-badge ${getStatusClass(pi.status)}`}>
                                 {getStatusText(pi.status)}
                             </span>
                         </td>
-                        <td className="pis-page__actions"> {/* Usaremos o CSS da página (Parte 3) */}
+                        <td className="pis-page__actions"> 
                             {/* Botão Gerar Contrato */}
                             <button
                                 className="pis-page__action-button pis-page__action-button--contrato"

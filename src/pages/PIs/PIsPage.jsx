@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchPIs, createPI, updatePI, deletePI, downloadPI_PDF, createContrato, downloadContrato_PDF } from '../../services/api';
 import { useToast } from '../../components/ToastNotification/ToastNotification';
-import { useConfirmation } from '../../context/ConfirmationContext'; // Corrigido do Passo 3 anterior
+import { useConfirmation } from '../../context/ConfirmationContext'; 
 import Spinner from '../../components/Spinner/Spinner';
 import Modal from '../../components/Modal/Modal';
 import PITable from '../../components/PITable/PITable';
@@ -41,12 +41,12 @@ function PIsPage() {
             });
             if (filters.status !== 'todos') params.append('status', filters.status);
             if (filters.clienteId !== 'todos') params.append('clienteId', filters.clienteId);
-            return fetchPIs(params);
+            return fetchPIs(params); // Esta chamada agora busca 'formaPagamento' e 'placas' (IDs)
         },
         placeholderData: (prev) => prev,
     });
     
-    const pis = piData?.data ?? [];
+    const pis = piData?.data ?? []; 
     const pagination = piData?.pagination ?? { currentPage: 1, totalPages: 1 };
 
     // --- Mutações ---
@@ -64,33 +64,26 @@ function PIsPage() {
             closeModal();
             queryClient.invalidateQueries({ queryKey: ['pis'] });
         },
-        // [MELHORIA APLICADA AQUI]
         onError: (error, _variables, context) => {
-            const setModalError = context?.setModalError; // Pega a função setError do RHF
-            const apiErrors = error.response?.data?.errors; // Acessa os erros de validação
-
-            // Se a API retornou erros de campo específicos (do express-validator)
+            const setModalError = context?.setModalError; 
+            const apiErrors = error.response?.data?.errors; 
             if (apiErrors && setModalError) {
                 try {
                     Object.keys(apiErrors).forEach((fieldName) => {
-                        // O backend envia 'clienteId', o form usa 'clienteId'
-                        // O backend envia 'dataFim', o form usa 'dataFim', etc.
                         setModalError(fieldName, { 
                             type: 'api', 
-                            message: apiErrors[fieldName] // A mensagem de erro específica
+                            message: apiErrors[fieldName] 
                         });
                     });
                 } catch (e) {
                      console.error("Erro ao tentar mapear erros da API:", e);
                 }
             }
-            
-            // Mostra o toast com a mensagem principal
             showToast(error.message || 'Erro ao criar PI.', 'error');
         }
     });
 
-    // ... (Restante das Mutações: updatePIMutation, deletePIMutation, etc. - INALTERADAS) ...
+    // Update PI
     const updatePIMutation = useMutation({
         mutationFn: (vars) => updatePI(vars.id, vars.data),
         onSuccess: () => {
@@ -98,7 +91,7 @@ function PIsPage() {
             closeModal();
             queryClient.invalidateQueries({ queryKey: ['pis'] });
         },
-        onError: (error, _variables, context) => { // Atualização também pode ter erros de API
+        onError: (error, _variables, context) => { 
             const setModalError = context?.setModalError;
             const apiErrors = error.response?.data?.errors;
             if (apiErrors && setModalError) {
@@ -110,6 +103,7 @@ function PIsPage() {
         }
     });
     
+    // Delete PI
     const deletePIMutation = useMutation({
         mutationFn: deletePI,
         onMutate: (piId) => setActionState(s => ({ ...s, isDeleting: { piId } })),
@@ -121,6 +115,7 @@ function PIsPage() {
         onSettled: () => setActionState(s => ({ ...s, isDeleting: null }))
     });
 
+    // Download PI
     const downloadPIMutation = useMutation({
         mutationFn: downloadPI_PDF,
         onMutate: (piId) => setActionState(s => ({ ...s, isDownloading: { piId } })),
@@ -132,18 +127,20 @@ function PIsPage() {
         onSettled: () => setActionState(s => ({ ...s, isDownloading: null }))
     });
     
+    // Download Contrato
     const downloadContratoMutation = useMutation({
         mutationFn: downloadContrato_PDF,
         onSuccess: (data) => saveAs(data.blob, data.filename),
         onError: (error) => showToast(error.message || 'Erro ao baixar PDF do contrato.', 'error')
     });
 
+    // Create Contrato
     const createContratoMutation = useMutation({
         mutationFn: createContrato,
         onMutate: (piId) => setActionState(s => ({ ...s, isCreatingContrato: { piId } })),
         onSuccess: (data) => {
             showToast('Contrato criado com sucesso!', 'success');
-            downloadContratoMutation.mutate(data.id);
+            downloadContratoMutation.mutate(data.id); 
         },
         onError: (error) => showToast(error.message || 'Erro ao criar contrato.', 'error'),
         onSettled: () => setActionState(s => ({ ...s, isCreatingContrato: null }))
@@ -155,18 +152,18 @@ function PIsPage() {
     const openEditModal = (pi) => { setEditingPI(pi); setIsModalOpen(true); };
     const closeModal = () => { setIsModalOpen(false); setEditingPI(null); };
 
-    // [MELHORIA APLICADA AQUI]
+    // Submit
     const onModalSubmit = (data, setModalError) => {
-        // Passa o 'setModalError' para o contexto da mutação
         const mutationOptions = { context: { setModalError } };
         
         if (editingPI) {
-            updatePIMutation.mutate({ id: editingPI.id, data }, mutationOptions);
+            updatePIMutation.mutate({ id: editingPI._id, data }, mutationOptions);
         } else {
             createPIMutation.mutate(data, mutationOptions);
         }
     };
     
+    // Delete
     const onDeleteClick = async (pi) => {
          try {
             await showConfirmation({
@@ -174,27 +171,33 @@ function PIsPage() {
                 title: "Confirmar Exclusão",
                 confirmButtonType: "red",
             });
-            deletePIMutation.mutate(pi.id);
+            deletePIMutation.mutate(pi._id);
          } catch (error) { /* Cancelado */ }
     };
     
-    const onDownloadPI = (pi) => downloadPIMutation.mutate(pi.id);
-    const onCreateContrato = (pi) => createContratoMutation.mutate(pi.id);
+    // Download PI
+    const onDownloadPI = (pi) => downloadPIMutation.mutate(pi._id);
+    
+    // Create Contrato
+    const onCreateContrato = (pi) => createContratoMutation.mutate(pi._id);
 
     // --- Renderização ---
+    // --- ALTERAÇÃO AQUI --- (colSpan atualizado para 9)
+    const newColSpan = 9;
+    
     const renderTableContent = () => {
         if (isLoading) {
-            return <tr><td colSpan="7"><Spinner message="A carregar PIs..." /></td></tr>;
+            return <tr><td colSpan={newColSpan}><Spinner message="A carregar PIs..." /></td></tr>;
         }
         if (isError) {
-            return <tr><td colSpan="7" className="text-center error-message">Erro: {error.message}</td></tr>;
+            return <tr><td colSpan={newColSpan} className="text-center error-message">Erro: {error.message}</td></tr>;
         }
         if (pis.length === 0) {
-            return <tr><td colSpan="7" className="text-center">Nenhuma PI encontrada.</td></tr>;
+            return <tr><td colSpan={newColSpan} className="text-center">Nenhuma PI encontrada.</td></tr>;
         }
         return (
             <PITable
-                pis={pis}
+                pis={pis} // 'pis' agora contém 'formaPagamento' e 'placas' (array de IDs)
                 onEditClick={openEditModal}
                 onDeleteClick={onDeleteClick}
                 onDownloadPI={onDownloadPI}
@@ -217,15 +220,19 @@ function PIsPage() {
             <div className="pis-page__table-wrapper">
                 <table className="pis-page__table">
                     <thead>
+                        {/* --- ALTERAÇÃO AQUI --- (Novas colunas) */}
                         <tr>
                             <th>Cliente</th>
                             <th>Período</th>
                             <th>Início</th>
                             <th>Fim</th>
                             <th>Valor</th>
+                            <th>Qtd. Placas</th> {/* Nova Coluna */}
+                            <th>Pagamento</th>   {/* Nova Coluna */}
                             <th>Status</th>
                             <th>Ações</th>
                         </tr>
+                        {/* ------------------------------- */}
                     </thead>
                     {renderTableContent()}
                 </table>
@@ -242,7 +249,8 @@ function PIsPage() {
                     onSubmit={onModalSubmit}
                     onClose={closeModal}
                     isSubmitting={createPIMutation.isPending || updatePIMutation.isPending}
-                    initialData={editingPI || {}}
+                    // 'editingPI' agora contém 'formaPagamento' e 'placas' (IDs)
+                    initialData={editingPI || {}} 
                 />
             </Modal>
         </div>

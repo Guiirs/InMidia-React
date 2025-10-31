@@ -1,79 +1,189 @@
 // src/pages/Empresa/subpages/EmpresaDetalhes.jsx
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { fetchEmpresaData } from '../../../services/api';
+import React, { useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { getEmpresaDetails, updateEmpresaDetails } from '../../../services/api';
+import { useToast } from '../../../components/ToastNotification/ToastNotification';
 import Spinner from '../../../components/Spinner/Spinner';
 
-// Chave da query para os dados da empresa (será compartilhada com a aba de API)
-const empresaQueryKey = ['empresaData'];
-
 function EmpresaDetalhes() {
-  // 1. Busca os dados da empresa
-  const {
-    data: empresaData,
-    isLoading,
-    isError,
-    error,
-  } = useQuery({
-    queryKey: empresaQueryKey,
-    queryFn: fetchEmpresaData,
-    staleTime: 1000 * 60 * 10, // Cache de 10 minutos
-  });
+    const showToast = useToast();
+    const queryClient = useQueryClient();
 
-  // 2. Renderiza estados de loading/erro
-  if (isLoading) {
-    // Usamos um Spinner genérico, mas o card em si não aparecerá até carregar
-    return <Spinner message="A carregar detalhes da empresa..." />;
-  }
+    // --- Query para buscar dados da empresa ---
+    const { data: empresaData, isLoading: isLoadingEmpresa, isError, error } = useQuery({
+        queryKey: ['empresaDetails'],
+        queryFn: getEmpresaDetails
+    });
 
-  if (isError) {
+    // --- Formulário ---
+    const { 
+        register, 
+        handleSubmit, 
+        reset, 
+        setError, 
+        formState: { errors, isDirty } 
+    } = useForm({
+        // --- ALTERAÇÃO AQUI ---
+        defaultValues: {
+            nome: '',
+            cnpj: '',
+            endereco: '', // Adicionado
+            bairro: '',   // Adicionado
+            cidade: '',   // Adicionado
+            telefone: ''  // Adicionado
+        }
+    });
+
+    // Carregar dados no form quando a query retornar
+    useEffect(() => {
+        if (empresaData) {
+            // --- ALTERAÇÃO AQUI ---
+            reset({
+                nome: empresaData.nome || '',
+                cnpj: empresaData.cnpj || '',
+                endereco: empresaData.endereco || '', // Adicionado
+                bairro: empresaData.bairro || '',   // Adicionado
+                cidade: empresaData.cidade || '',   // Adicionado
+                telefone: empresaData.telefone || ''  // Adicionado
+            });
+        }
+    }, [empresaData, reset]);
+
+    // --- Mutação para atualizar ---
+    const updateEmpresaMutation = useMutation({
+        mutationFn: updateEmpresaDetails,
+        onSuccess: (data) => {
+            queryClient.setQueryData(['empresaDetails'], data); // Atualiza o cache
+            queryClient.invalidateQueries(['empresaDetails']);
+            reset(data); // Reseta o form com os novos dados
+            showToast('Dados da empresa atualizados com sucesso!', 'success');
+        },
+        onError: (error) => {
+            const apiErrors = error.response?.data?.errors;
+            if (apiErrors) {
+                Object.keys(apiErrors).forEach((fieldName) => {
+                    setError(fieldName, { type: 'api', message: apiErrors[fieldName] });
+                });
+            }
+            showToast(error.message || 'Erro ao atualizar dados.', 'error');
+        }
+    });
+
+    const onFormSubmit = (data) => {
+        updateEmpresaMutation.mutate(data);
+    };
+    
+    const isSubmitting = updateEmpresaMutation.isPending;
+
+    // --- Renderização ---
+    if (isLoadingEmpresa) {
+        return <Spinner message="A carregar dados da empresa..." />;
+    }
+
+    if (isError) {
+        return <div className="text-center error-message">Erro ao carregar dados: {error.message}</div>;
+    }
+
     return (
-      <div className="empresa-settings-card"> {/* Usa o estilo de card do CSS pai */}
-        <p className="error-message">Erro ao carregar dados: {error.message}</p>
-      </div>
+        <form className="settings-card" onSubmit={handleSubmit(onFormSubmit)} noValidate>
+            <div className="settings-card__header">
+                <h3>Detalhes da Empresa</h3>
+                <p>Informações principais da sua empresa que aparecerão em relatórios e contratos.</p>
+            </div>
+            
+            <div className="settings-card__content">
+                {/* Nome */}
+                <div className="settings-card__input-group">
+                    <label htmlFor="nome">Nome / Razão Social</label>
+                    <input
+                        type="text"
+                        id="nome"
+                        className={`modal-form__input ${errors.nome ? 'input-error' : ''}`}
+                        {...register('nome', { required: 'O nome é obrigatório.' })}
+                        disabled={isSubmitting}
+                    />
+                    {errors.nome && <div className="modal-form__error-message">{errors.nome.message}</div>}
+                </div>
+                
+                {/* CNPJ */}
+                <div className="settings-card__input-group">
+                    <label htmlFor="cnpj">CNPJ</label>
+                    <input
+                        type="text"
+                        id="cnpj"
+                        className={`modal-form__input ${errors.cnpj ? 'input-error' : ''}`}
+                        {...register('cnpj', { required: 'O CNPJ é obrigatório.' })}
+                        disabled={isSubmitting}
+                    />
+                    {errors.cnpj && <div className="modal-form__error-message">{errors.cnpj.message}</div>}
+                </div>
+
+                {/* --- NOVOS CAMPOS ADICIONADOS --- */}
+                
+                {/* Endereço */}
+                <div className="settings-card__input-group">
+                    <label htmlFor="endereco">Endereço</label>
+                    <input
+                        type="text"
+                        id="endereco"
+                        className={`modal-form__input ${errors.endereco ? 'input-error' : ''}`}
+                        {...register('endereco')}
+                        disabled={isSubmitting}
+                    />
+                </div>
+                
+                {/* Bairro */}
+                <div className="settings-card__input-group">
+                    <label htmlFor="bairro">Bairro</label>
+                    <input
+                        type="text"
+                        id="bairro"
+                        className={`modal-form__input ${errors.bairro ? 'input-error' : ''}`}
+                        {...register('bairro')}
+                        disabled={isSubmitting}
+                    />
+                </div>
+                
+                {/* Cidade */}
+                <div className="settings-card__input-group">
+                    <label htmlFor="cidade">Cidade</label>
+                    <input
+                        type="text"
+                        id="cidade"
+                        className={`modal-form__input ${errors.cidade ? 'input-error' : ''}`}
+                        {...register('cidade')}
+                        disabled={isSubmitting}
+                    />
+                </div>
+                
+                {/* Telefone */}
+                <div className="settings-card__input-group">
+                    <label htmlFor="telefone">Telefone</label>
+                    <input
+                        type="tel"
+                        id="telefone"
+                        className={`modal-form__input ${errors.telefone ? 'input-error' : ''}`}
+                        {...register('telefone')}
+                        disabled={isSubmitting}
+                    />
+                </div>
+
+                {/* --- FIM DOS NOVOS CAMPOS --- */}
+
+            </div>
+            
+            <div className="settings-card__actions">
+                <button 
+                    type="submit" 
+                    className="modal-form__button modal-form__button--confirm"
+                    disabled={isSubmitting || !isDirty}
+                >
+                    {isSubmitting ? 'A guardar...' : 'Guardar Alterações'}
+                </button>
+            </div>
+        </form>
     );
-  }
-
-  // 3. Calcula dados de status (lógica movida da página principal)
-  const status = empresaData?.status_assinatura;
-  const statusText = status === 'active' ? 'Ativa' : 'Inativa';
-  const statusClass = status === 'active'
-    ? 'empresa-settings-card__status--active'
-    : 'empresa-settings-card__status--inactive';
-
-  return (
-    // 4. Renderiza os cards usando as classes de estilo reutilizáveis
-    //    definidas no CSS da página pai (EmpresaSettings.css)
-    <>
-      {/* Card 1: Detalhes da Empresa */}
-      <div className="empresa-settings-card">
-        <div className="empresa-settings-card__header">
-          <i className="fas fa-building empresa-settings-card__icon"></i>
-          <h3 className="empresa-settings-card__title">Detalhes da Empresa</h3>
-        </div>
-        <div className="empresa-settings-card__info-group">
-          <span className="empresa-settings-card__info-label">Nome da Empresa</span>
-          <p className="empresa-settings-card__info-value">{empresaData?.nome || 'N/A'}</p>
-        </div>
-      </div>
-
-      {/* Card 2: Assinatura */}
-      <div className="empresa-settings-card">
-        <div className="empresa-settings-card__header">
-          <i className="fas fa-credit-card empresa-settings-card__icon" style={{ color: 'var(--accent-pink)' }}></i>
-          <h3 className="empresa-settings-card__title">Assinatura</h3>
-        </div>
-        <div className="empresa-settings-card__info-group">
-          <span className="empresa-settings-card__info-label">Status</span>
-          <div> {/* Wrapper para o status */}
-            <span className={`empresa-settings-card__status ${statusClass}`}>
-              {statusText}
-            </span>
-          </div>
-        </div>
-      </div>
-    </>
-  );
 }
 
 export default EmpresaDetalhes;
