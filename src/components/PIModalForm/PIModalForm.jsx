@@ -14,6 +14,9 @@ import { usePlacaFilters } from '../../hooks/usePlacaFilters';
 
 function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
     
+    // --- ESTÁGIO 1: Renderização ---
+    console.log("--- [PIModalForm] ESTÁGIO 1: Componente RENDERIZOU ---");
+
     // --- 1. Lógica de Clientes ---
     const { data: clientes = [], isLoading: isLoadingClientes } = useQuery({
         queryKey: ['clientes', 'all'], 
@@ -26,7 +29,7 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
     const {
         register,
         handleSubmit,
-        reset,
+        reset, // A função reset vem daqui
         watch,
         setValue, 
         control, 
@@ -66,6 +69,14 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
         setPlacaSearch
     } = usePlacaFilters(watchedPlacas); // Passa os IDs selecionados para o hook
 
+    // --- ESTÁGIO 2: Estado dos Filtros ---
+    console.log(
+        `[PIModalForm] ESTÁGIO 2: Hook usePlacaFilters. Estado atual:`,
+        `\n  - Regiao: "${selectedRegiao}"`,
+        `\n  - Search: "${placaSearch}"`,
+        `\n  - Placas Selecionadas (IDs): [${watchedPlacas.length}]`
+    );
+
     
     // --- 4. Handlers e Efeitos ---
     function formatDateForInput(isoDate) {
@@ -74,11 +85,14 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
     }
     
     // ---
-    // --- A CORREÇÃO ESTÁ AQUI ---
+    // --- ALTERAÇÃO NECESSÁRIA ESTÁ AQUI ---
     // ---
     // Efeito para resetar o form (agora também reseta os filtros)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
-        console.log("[PIModalForm] Resetando formulário e filtros (Modal abriu).");
+        // --- ESTÁGIO 3: Reset (Abertura do Modal) ---
+        console.log("%c[PIModalForm] ESTÁGIO 3 (EFEITO): Resetando formulário e filtros (Modal abriu).", "color: red; font-weight: bold;");
+        
         const cliente = initialData.cliente || {};
         reset({
             clienteId: cliente._id || initialData.cliente || '',
@@ -97,15 +111,18 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
         setSelectedRegiao('');
         setPlacaSearch('');
 
-    // A lista de dependências SÓ deve incluir 'initialData' e 'reset'.
-    // As funções 'set' NUNCA devem estar na dependência de um useEffect
-    // que as chama, pois isso causa um loop infinito ou resets indesejados.
-    }, [initialData, reset]);
-    // --- FIM DA CORREÇÃO ---
+    // A lista de dependências SÓ deve incluir 'initialData'.
+    // Removemos 'reset' porque ele está a causar o re-trigger do efeito.
+    // O 'eslint-disable-next-line' acima é para suprimir o aviso sobre isso.
+    }, [initialData]);
+    // --- FIM DA ALTERAÇÃO ---
 
 
     // Efeito para auto-preencher dados do cliente
     useEffect(() => {
+        // --- ESTÁGIO 4: Efeito de Cliente ---
+        console.log(`[PIModalForm] ESTÁGIO 4 (EFEITO): Verificando auto-preenchimento (Cliente ID: ${watchedClienteId}).`);
+        
         if (watchedClienteId && clientes.length > 0) {
             const clienteSelecionado = clientes.find(c => c._id === watchedClienteId);
             if (clienteSelecionado) {
@@ -120,6 +137,8 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
 
     
     const handleFormSubmit = (data) => {
+        // --- ESTÁGIO 5: Submit ---
+        console.log("[PIModalForm] ESTÁGIO 5 (AÇÃO): Formulário submetido.", data);
         const { responsavel, segmento, ...piData } = data;
         // Passa o setModalError para o PIsPage poder definir erros de API
         onSubmit(piData, setModalError); 
@@ -129,6 +148,14 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
     const isLoading = isSubmitting || isLoadingClientes || isLoadingPlacasEAfins;
 
     // --- 4. Renderização (JSX) ---
+    
+    // --- ESTÁGIO 6: Pré-Renderização ---
+    console.log(
+        `%c[PIModalForm] ESTÁGIO 6: Preparando renderização...`,
+        "color: blue;",
+        `\n  - Filtros que serão passados: Regiao="${selectedRegiao}", Search="${placaSearch}"`
+    );
+
     return (
         <form id="pi-form" className="modal-form" onSubmit={handleSubmit(handleFormSubmit)} noValidate>
             
@@ -156,6 +183,8 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
                     availablePlacas={availablePlacas}
                     selectedPlacasObjects={selectedPlacasObjects}
                     getRegiaoNome={getRegiaoNome}
+                    
+                    // As props mais importantes: o estado e as funções de set
                     selectedRegiao={selectedRegiao}
                     setSelectedRegiao={setSelectedRegiao}
                     placaSearch={placaSearch}
