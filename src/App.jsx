@@ -66,29 +66,42 @@ function App() {
               <Route path="/placas/novo" element={<PlacaFormPage />} />
               <Route path="/placas/editar/:id" element={<PlacaFormPage />} /> 
               <Route path="/placas/:id" element={<PlacaDetailsPage />} />
-              <Route path="/clientes" element={<ClientesPage />} />
+              
+              {/* --- ROTA DE CLIENTES REMOVIDA DESTE NÍVEL --- */}
+              {/* <Route path="/clientes" element={<ClientesPage />} /> */}
+              
               <Route path="/regioes" element={<RegioesPage />} />
               <Route path="/map" element={<MapPage />} />
               <Route path="/relatorios" element={<RelatoriosPage />} />
               <Route path="/user" element={<UserPage />} />
               
-              {/* Rota de Empresa (como estava no seu original) */}
+              {/* --- ROTA DE EMPRESA ATUALIZADA --- */}
+              {/* Esta rota agora serve como um "layout" para as abas de Empresa */}
               <Route path="/empresa-settings" element={<EmpresaSettingsPage />}>
+                {/* Rota Padrão: Redireciona para a aba "detalhes" */}
                 <Route index element={<Navigate to="detalhes" replace />} />
+                
+                {/* Aba 1: Detalhes */}
                 <Route path="detalhes" element={<EmpresaDetalhes />} />
                 
+                {/* Aba 2: Clientes (MOVEMOS PARA AQUI) */}
+                <Route path="clientes" element={<ClientesPage />} />
+                
+                {/* Aba 3: PIs (MOVIDA PARA AQUI) */}
+                <Route path="propostas" element={<PIsPage />} />
+                
+                {/* Aba 4: Contratos (MOVIDA PARA AQUI) */}
+                <Route path="contratos" element={<ContratosPage />} />
+
+                {/* Aba 5: Admin (API Key) */}
                 <Route element={<AdminRoute />}>
                   <Route path="api" element={<EmpresaApiKey />} />
                 </Route>
               </Route>
               
-              {/* Rota de Gestão (PIs) (como estava no seu original) */}
-              <Route path="/propostas" element={<PIsPage />} />
-              
-              {/* --- ALTERAÇÃO AQUI --- */}
-              {/* 2. Adicione a rota para a nova página de Contratos */}
-              <Route path="/contratos" element={<ContratosPage />} />
-              {/* --------------------- */}
+              {/* --- ROTAS DE PI E CONTRATOS REMOVIDAS DA RAIZ --- */}
+              {/* <Route path="/propostas" element={<PIsPage />} /> */}
+              {/* <Route path="/contratos" element={<ContratosPage />} /> */}
 
               {/* Rotas de Admin */}
               <Route element={<AdminRoute />}>

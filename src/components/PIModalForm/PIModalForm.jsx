@@ -1,38 +1,52 @@
 // src/components/PIModalForm/PIModalForm.jsx
-import React, { useEffect } from 'react'; 
-import PropTypes from 'prop-types'; 
+import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { useForm } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
-import { fetchClientes } from '../../services/api'; 
+import { fetchClientes } from '../../services/api';
 
-// Importa os sub-componentes e o hook
-import PIModalFormInfo from './PIModalFormInfo';
-import PIModalFormPlacaSelector from './PIModalFormPlacaSelector';
-// Corrigido o caminho se 'hooks' estiver em src/
-import { usePlacaFilters } from '../../hooks/usePlacaFilters'; 
+// 1. Removemos a importação do hook 'usePlacaFilters'
+// import { usePlacaFilters } from '../../hooks/usePlacaFilters'; 
 
+// 2. Importamos as Etapas da subpasta 'steps'
+import PIFormStep1_Cliente from './steps/PIFormStep1_Cliente';
+import PIModalFormPlacaSelector from './steps/PIModalFormPlacaSelector';
+import PIFormStep3_Valores from './steps/PIFormStep3_Valores';
+
+// Importa o CSS das etapas
+import './steps/PIFormSteps.css';
+
+// Helper para formatar data
+function formatDateForInput(isoDate) {
+    if (!isoDate) return '';
+    return new Date(isoDate).toISOString().split('T')[0];
+}
 
 function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
     
-    // --- ESTÁGIO 1: Renderização ---
-    console.log("--- [PIModalForm] ESTÁGIO 1: Componente RENDERIZOU ---");
+    // --- 1. Estado de Navegação ---
+    const [currentStep, setCurrentStep] = useState(1);
 
-    // --- 1. Lógica de Clientes ---
+    // --- 2. Lógica de Clientes (para Etapa 1) ---
     const { data: clientes = [], isLoading: isLoadingClientes } = useQuery({
-        queryKey: ['clientes', 'all'], 
-        queryFn: () => fetchClientes(new URLSearchParams({ limit: 1000 })),
+        // 3. CORREÇÃO DO BUG DE CACHE:
+        // A chave agora é ['clientes'], que corresponde à invalidação
+        // feita na ClientesPage.jsx
+        queryKey: ['clientes'], 
+        queryFn: () => fetchClientes(new URLSearchParams({ limit: 1000 })), // Busca todos
         select: (data) => data.data ?? [],
-        staleTime: 1000 * 60 * 10
+        staleTime: 1000 * 60 * 10 // 10 min cache
     });
 
-    // --- 2. Lógica do Formulário (React Hook Form) ---
+    // --- 3. Lógica do Formulário (RHF) ---
     const {
         register,
         handleSubmit,
-        reset, // A função reset vem daqui
+        reset,
         watch,
         setValue, 
         control, 
+        trigger, // Usado para validar etapas
         formState: { errors: modalErrors },
         setError: setModalError
     } = useForm({
@@ -51,48 +65,18 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
         }
     });
 
-    // Observa campos
+    // Observa campos necessários para outras etapas/lógica
     const dataInicio = watch('dataInicio');
+    const dataFim = watch('dataFim'); // Adicionado para passar para a Etapa 2
     const watchedClienteId = watch('clienteId');
-    const watchedPlacas = watch('placas') || [];
 
-    // --- 3. Lógica de Placas (Vive no Pai) ---
-    const {
-        isLoading: isLoadingPlacasEAfins,
-        regioes,
-        availablePlacas,
-        selectedPlacasObjects,
-        getRegiaoNome,
-        selectedRegiao,
-        setSelectedRegiao,
-        placaSearch,
-        setPlacaSearch
-    } = usePlacaFilters(watchedPlacas); // Passa os IDs selecionados para o hook
-
-    // --- ESTÁGIO 2: Estado dos Filtros ---
-    console.log(
-        `[PIModalForm] ESTÁGIO 2: Hook usePlacaFilters. Estado atual:`,
-        `\n  - Regiao: "${selectedRegiao}"`,
-        `\n  - Search: "${placaSearch}"`,
-        `\n  - Placas Selecionadas (IDs): [${watchedPlacas.length}]`
-    );
-
+    // 4. Lógica de Placas (Etapa 2)
+    // Removida. A Etapa 2 agora cuida do seu próprio loading.
+    const isLoadingPlacasEAfins = false; 
     
-    // --- 4. Handlers e Efeitos ---
-    function formatDateForInput(isoDate) {
-        if (!isoDate) return '';
-        return new Date(isoDate).toISOString().split('T')[0];
-    }
+    // --- 5. Handlers e Efeitos ---
     
-    // ---
-    // --- ALTERAÇÃO NECESSÁRIA ESTÁ AQUI ---
-    // ---
-    // Efeito para resetar o form (agora também reseta os filtros)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
-        // --- ESTÁGIO 3: Reset (Abertura do Modal) ---
-        console.log("%c[PIModalForm] ESTÁGIO 3 (EFEITO): Resetando formulário e filtros (Modal abriu).", "color: red; font-weight: bold;");
-        
         const cliente = initialData.cliente || {};
         reset({
             clienteId: cliente._id || initialData.cliente || '',
@@ -107,103 +91,147 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
             placas: initialData.placas?.map(p => p._id || p) || []
         });
         
-        // Reseta os filtros no hook
-        setSelectedRegiao('');
-        setPlacaSearch('');
+        setCurrentStep(1); // Reseta para a etapa 1 ao abrir
 
-    // A lista de dependências SÓ deve incluir 'initialData'.
-    // Removemos 'reset' porque ele está a causar o re-trigger do efeito.
-    // O 'eslint-disable-next-line' acima é para suprimir o aviso sobre isso.
-    }, [initialData]);
-    // --- FIM DA ALTERAÇÃO ---
+    }, [initialData, reset]);
 
-
-    // Efeito para auto-preencher dados do cliente
-    useEffect(() => {
-        // --- ESTÁGIO 4: Efeito de Cliente ---
-        console.log(`[PIModalForm] ESTÁGIO 4 (EFEITO): Verificando auto-preenchimento (Cliente ID: ${watchedClienteId}).`);
-        
-        if (watchedClienteId && clientes.length > 0) {
-            const clienteSelecionado = clientes.find(c => c._id === watchedClienteId);
-            if (clienteSelecionado) {
-                setValue('responsavel', clienteSelecionado.responsavel || '', { shouldValidate: false });
-                setValue('segmento', clienteSelecionado.segmento || '', { shouldValidate: false });
-            }
-        } else if (!watchedClienteId) {
-            setValue('responsavel', '', { shouldValidate: false });
-            setValue('segmento', '', { shouldValidate: false });
-        }
-    }, [watchedClienteId, clientes, setValue]);
-
-    
+    // Submissão final (Etapa 3)
     const handleFormSubmit = (data) => {
-        // --- ESTÁGIO 5: Submit ---
-        console.log("[PIModalForm] ESTÁGIO 5 (AÇÃO): Formulário submetido.", data);
+        // Remove campos 'dummy' antes de enviar
         const { responsavel, segmento, ...piData } = data;
-        // Passa o setModalError para o PIsPage poder definir erros de API
         onSubmit(piData, setModalError); 
     };
     
-    // Loading total (para os botões de Ação)
+    // Loading agregado
     const isLoading = isSubmitting || isLoadingClientes || isLoadingPlacasEAfins;
 
-    // --- 4. Renderização (JSX) ---
-    
-    // --- ESTÁGIO 6: Pré-Renderização ---
-    console.log(
-        `%c[PIModalForm] ESTÁGIO 6: Preparando renderização...`,
-        "color: blue;",
-        `\n  - Filtros que serão passados: Regiao="${selectedRegiao}", Search="${placaSearch}"`
-    );
+    // --- 6. Navegação de Etapas ---
+    const nextStep = async () => {
+        let fieldsToValidate;
+        if (currentStep === 1) {
+            // Valida os campos da primeira etapa
+            fieldsToValidate = ['clienteId', 'descricao'];
+        } else if (currentStep === 2) {
+            // Valida os campos da segunda etapa
+            fieldsToValidate = ['placas']; 
+        }
+        
+        if (fieldsToValidate) {
+            const isValid = await trigger(fieldsToValidate);
+            if (!isValid) return; // Para se a etapa atual for inválida
+        }
+        
+        if (currentStep < 3) {
+            setCurrentStep(step => step + 1);
+        }
+    };
 
+    const prevStep = () => {
+        if (currentStep > 1) {
+            setCurrentStep(step => step - 1);
+        }
+    };
+
+    // --- 7. Renderização ---
     return (
         <form id="pi-form" className="modal-form" onSubmit={handleSubmit(handleFormSubmit)} noValidate>
             
-            <div className="modal-form__grid">
+            {/* --- CORREÇÃO: INDICADOR DE ETAPAS (AGORA VISÍVEL) --- */}
+            <div className="pi-form-steps">
+                <div className={`pi-form-step ${currentStep === 1 ? 'active' : (currentStep > 1 ? 'completed' : '')}`}>
+                    <div className="pi-form-step__bubble">1</div>
+                    <span>Cliente</span>
+                </div>
+                <div className={`pi-form-step ${currentStep === 2 ? 'active' : (currentStep > 2 ? 'completed' : '')}`}>
+                    <div className="pi-form-step__bubble">2</div>
+                    <span>Placas</span>
+                </div>
+                <div className={`pi-form-step ${currentStep === 3 ? 'active' : ''}`}>
+                    <div className="pi-form-step__bubble">3</div>
+                    <span>Valores</span>
+                </div>
+            </div>
+
+            {/* Conteúdo da Etapa (Renderização Condicional) */}
+            <div className="modal-form__grid pi-form__step-content">
                 
-                {/* Componente 1: Campos de Informação */}
-                <PIModalFormInfo
-                    register={register}
-                    errors={modalErrors}
-                    isSubmitting={isSubmitting}
-                    dataInicio={dataInicio}
-                    clientes={clientes}
-                    isLoadingClientes={isLoadingClientes}
-                />
+                {currentStep === 1 && (
+                    <PIFormStep1_Cliente
+                        register={register}
+                        errors={modalErrors}
+                        isSubmitting={isSubmitting}
+                        clientes={clientes}
+                        isLoadingClientes={isLoadingClientes}
+                        watchedClienteId={watchedClienteId}
+                        setValue={setValue}
+                    />
+                )}
                 
-                {/* Componente 2: Seletor de Placas */}
-                <PIModalFormPlacaSelector
-                    control={control}
-                    name="placas"
-                    isSubmitting={isSubmitting}
-                    
-                    // Passa todos os resultados e setters do hook para o componente-filho
-                    isLoading={isLoadingPlacasEAfins}
-                    regioes={regioes}
-                    availablePlacas={availablePlacas}
-                    selectedPlacasObjects={selectedPlacasObjects}
-                    getRegiaoNome={getRegiaoNome}
-                    
-                    // As props mais importantes: o estado e as funções de set
-                    selectedRegiao={selectedRegiao}
-                    setSelectedRegiao={setSelectedRegiao}
-                    placaSearch={placaSearch}
-                    setPlacaSearch={setPlacaSearch}
-                />
+                {currentStep === 2 && (
+                    <PIModalFormPlacaSelector
+                        control={control}
+                        name="placas" // Nome do campo no RHF
+                        isSubmitting={isSubmitting}
+                        // Passa as datas para a Etapa 2 poder buscar placas
+                        dataInicio={dataInicio}
+                        dataFim={dataFim}
+                    />
+                )}
+
+                {currentStep === 3 && (
+                    <PIFormStep3_Valores
+                        register={register}
+                        errors={modalErrors}
+                        isSubmitting={isSubmitting}
+                        dataInicio={dataInicio}
+                        setValue={setValue}
+                        watch={watch} 
+                    />
+                )}
 
             </div>
 
-            {/* Ações do Formulário */}
+            {/* --- CORREÇÃO: AÇÕES DO FORMULÁRIO (AGORA VISÍVEIS) --- */}
             <div className="modal-form__actions">
-                <button type="button" className="modal-form__button modal-form__button--cancel" onClick={onClose} disabled={isLoading}>
+                <button 
+                    type="button" 
+                    className="modal-form__button modal-form__button--cancel" 
+                    onClick={onClose} 
+                    disabled={isLoading}>
                     Cancelar
                 </button>
-                <button 
-                    type="submit" 
-                    className="modal-form__button modal-form__button--confirm" 
-                    disabled={isLoading}>
-                    {isSubmitting ? 'A guardar...' : 'Guardar PI'}
-                </button>
+                
+                {/* Botão VOLTAR (só aparece da Etapa 2 em diante) */}
+                {currentStep > 1 && (
+                    <button 
+                        type="button" 
+                        className="modal-form__button modal-form__button--cancel" 
+                        onClick={prevStep} 
+                        disabled={isLoading}>
+                        Voltar
+                    </button>
+                )}
+
+                {/* Botão PRÓXIMO (só aparece nas Etapas 1 e 2) */}
+                {currentStep < 3 && (
+                    <button 
+                        type="button" 
+                        className="modal-form__button modal-form__button--confirm" 
+                        onClick={nextStep} 
+                        disabled={isLoading}>
+                        Próximo
+                    </button>
+                )}
+
+                {/* Botão GUARDAR (só aparece na Etapa 3) */}
+                {currentStep === 3 && (
+                    <button 
+                        type="submit" 
+                        className="modal-form__button modal-form__button--confirm" 
+                        disabled={isLoading}>
+                        {isSubmitting ? 'A guardar...' : (initialData._id ? 'Guardar Alterações' : 'Criar PI')}
+                    </button>
+                )}
             </div>
         </form>
     );

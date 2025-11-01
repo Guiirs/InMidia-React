@@ -221,6 +221,22 @@ export const fetchPlacaLocations = async () => {
     }
 };
 
+// --- FUNÇÃO ADICIONADA AQUI ---
+/**
+ * Busca placas disponíveis com base em um período.
+ * @param {URLSearchParams} params - Parâmetros (dataInicio, dataFim)
+ */
+export const fetchPlacasDisponiveis = async (params) => {
+    try {
+        const response = await apiClient.get(`/placas/disponiveis?${params.toString()}`);
+        return response.data; // Espera-se { data: [...] }
+    } catch (error) {
+        if (import.meta.env.DEV) console.error('[API fetchPlacasDisponiveis] Erro:', error);
+        throw error;
+    }
+};
+// --- FIM DA ADIÇÃO ---
+
 export const createRegiao = async (data) => {
     try {
         const response = await apiClient.post('/regioes', data);
@@ -483,7 +499,7 @@ export const downloadRelatorioOcupacaoPDF = async (data_inicio, data_fim) => {
                 throw new Error(errorJson.message || 'Erro ao gerar PDF');
              } catch(e) {
                 throw error;
-             }
+T          }
         }
         if (import.meta.env.DEV) console.error('[API downloadRelatorioOcupacaoPDF] Erro:', error);
         throw error;

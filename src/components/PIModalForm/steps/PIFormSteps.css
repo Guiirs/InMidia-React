@@ -1,0 +1,86 @@
+/* src/components/PIModalForm/steps/PIFormSteps.css */
+
+.pi-form-steps {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    padding: 0.5rem 1rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1.5rem;
+    position: relative; /* Para a linha de conexão */
+}
+
+/* Linha de conexão por trás das bolhas */
+.pi-form-steps::before {
+    content: '';
+    position: absolute;
+    top: 21px; /* Alinha verticalmente com o centro da bolha */
+    left: 10%; /* Começa um poucoDepois da primeira bolha */
+    right: 10%; /* Termina um pouco antes da última bolha */
+    height: 2px;
+    background-color: var(--border-color);
+    z-index: 1;
+}
+
+.pi-form-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    z-index: 2; /* Fica por cima da linha */
+    width: 80px; /* Largura para o texto */
+    text-align: center;
+}
+
+.pi-form-step__bubble {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+    border: 2px solid var(--border-color-light);
+    background-color: var(--bg-dark);
+    color: var(--text-muted);
+}
+
+.pi-form-step > span {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: color 0.3s ease;
+}
+
+/* --- Estados das Etapas --- */
+
+/* Etapa Ativa */
+.pi-form-step.active .pi-form-step__bubble {
+    background-color: var(--primary-color-light);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    box-shadow: 0 0 10px rgba(var(--primary-rgb), 0.3);
+}
+.pi-form-step.active > span {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* Etapa Concluída */
+.pi-form-step.completed .pi-form-step__bubble {
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+    color: #fff; /* Texto branco na bolha verde */
+}
+.pi-form-step.completed > span {
+    color: var(--text-secondary);
+}
+
+/* Conteúdo da Etapa */
+.pi-form__step-content {
+    /* Garante que o grid do formulário ocupe o espaço */
+    width: 100%;
+}

@@ -1,6 +1,6 @@
 // src/components/Sidebar/Sidebar.jsx
 import React, { useState, useEffect } from 'react';
-// [MELHORIA] Importamos useLocation para verificar a rota
+// Importamos useLocation para verificar a rota
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirmation } from '../../context/ConfirmationContext';
@@ -12,19 +12,16 @@ function Sidebar() {
   const showConfirmation = useConfirmation();
   const userIsAdmin = user?.role === 'admin';
   
-  // [MELHORIA] Pega a localização atual
+  // Pega a localização atual
   const location = useLocation();
 
-  // --- ALTERAÇÃO AQUI ---
-  // Simplificamos a função. Como /propostas e /contratos agora
-  // são filhos de /empresa-settings (graças à alteração no App.jsx),
-  // só precisamos de verificar a rota pai.
+  // Função para verificar se a rota de Empresa (ou suas filhas) está ativa
+  // Ela usa startsWith, então /empresa-settings/clientes também a ativará.
   const isEmpresaActive = () => {
       return location.pathname.startsWith('/empresa-settings');
   };
-  // --- FIM DA ALTERAÇÃO ---
 
-  // --- Lógica do Tema (Inalterada do seu arquivo original) ---
+  // --- Lógica do Tema (Inalterada) ---
   const [theme, setTheme] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
@@ -47,7 +44,7 @@ function Sidebar() {
   const themeIconClass = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
   // --- Fim da Lógica do Tema ---
 
-  // --- Lógica do Logout (Inalterada do seu arquivo original) ---
+  // --- Lógica do Logout (Inalterada) ---
   const handleLogout = async (e) => {
     e.preventDefault();
     try {
@@ -70,7 +67,6 @@ function Sidebar() {
   };
   
   return (
-    // [ESTRUTURA ORIGINAL MANTIDA]
     <aside className="sidebar">
       <div className="sidebar__header">
         <NavLink to="/dashboard" className="sidebar__logo-container" data-link>
@@ -83,13 +79,15 @@ function Sidebar() {
         <ul className="sidebar__nav">
           <li><NavLink to="/dashboard" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-home"></i> <span>Dashboard</span></NavLink></li>
           <li><NavLink to="/placas" end={false} className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-th-large"></i> <span>Placas</span></NavLink></li>
-          <li><NavLink to="/clientes" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-users"></i> <span>Clientes</span></NavLink></li>
+          
+          {/* --- CORREÇÃO APLICADA AQUI --- */}
+          {/* O link de Clientes foi removido da barra principal */}
+          {/* <li><NavLink to="/clientes" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-users"></i> <span>Clientes</span></NavLink></li> */}
+          
           <li><NavLink to="/regioes" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-map-marked-alt"></i> <span>Regiões</span></NavLink></li>
           <li><NavLink to="/map" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-map"></i> <span>Mapa</span></NavLink></li>
           <li><NavLink to="/relatorios" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-chart-pie"></i> <span>Relatórios</span></NavLink></li>
           
-          {/* Links de Propostas e Contratos removidos daqui (correto) */}
-
           {userIsAdmin && (
             <li><NavLink to="/admin-users" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-shield-alt"></i> <span>Admin</span></NavLink></li>
           )}
@@ -99,10 +97,9 @@ function Sidebar() {
       <div className="sidebar__footer">
         <NavLink to="/user" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-user"></i> <span>Meu Perfil</span></NavLink>
         
-        {/* [MELHORIA APLICADA AQUI] */}
+        {/* Este link agora cobre a página de Empresa E suas filhas (Clientes, PIs, etc.) */}
         <NavLink 
           to="/empresa-settings" 
-          // Usa a nova função 'isEmpresaActive'
           className={`sidebar__nav-link ${isEmpresaActive() ? 'sidebar__nav-link--active' : ''}`} 
           data-link
         >
