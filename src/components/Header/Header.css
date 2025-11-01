@@ -1,0 +1,96 @@
+/* --- Estilos do Header com BEM --- */
+
+/* Bloco Principal */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2.4rem 0; /* Ajustado (era 1.5rem * 1.6) */
+    margin-bottom: 3.2rem; /* Ajustado (era 2rem * 1.6) */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Elementos do Bloco */
+.header__title {
+    font-size: 2.8rem; /* Ajustado (era 1.75rem * 1.6) */
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-color);
+}
+
+.header__actions {
+    display: flex;
+    align-items: center;
+    gap: 2.4rem; /* Ajustado (era 1.5rem * 1.6) */
+}
+
+.header__search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.header__search-icon {
+    position: absolute;
+    left: 1.5rem; /* Ajustado (era 15px) */
+    color: var(--text-color-light);
+    font-size: 1.6rem; /* Tamanho do ícone */
+}
+
+.header__search-input {
+    background-color: var(--bg-secondary-color);
+    border: 1px solid var(--input-border);
+    border-radius: 1rem; /* Ajustado (era 10px) */
+    color: var(--text-color);
+    padding: 1.2rem 1.6rem 1.2rem 4rem; /* Ajustado (era 0.75rem, 1rem, 2.5rem * 1.6) */
+    font-size: 1.4rem; /* Ajustado (era 0.9rem * 1.6) */
+    width: 250px; /* Largura pode permanecer em px ou converter para rem (25rem) se preferir que escale */
+    transition: all 0.3s ease;
+}
+
+.header__search-input::placeholder {
+    color: var(--text-color-light);
+}
+
+.header__search-input:focus {
+    outline: none;
+    border-color: var(--accent-green);
+    background-color: var(--bg-color);
+    /* O box-shadow pode ser definido globalmente para inputs focados em base.css */
+    /* box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2); */
+}
+
+.header__user-profile {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem; /* Ajustado (era 1rem * 1.5) */
+    cursor: pointer;
+}
+
+.header__user-avatar {
+    width: 4rem; /* Ajustado (era 40px) */
+    height: 4rem; /* Ajustado (era 40px) */
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--input-border);
+}
+
+.header__user-info {
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+}
+
+.header__user-name {
+    font-weight: 600;
+    font-size: 1.4rem; /* Ajustado (era 0.9rem * 1.6) */
+    color: var(--text-color);
+    line-height: 1.3; /* Ajuste para melhor espaçamento vertical */
+}
+
+.header__user-role {
+    font-size: 1.3rem; /* Ajustado (era 0.8rem * 1.6) */
+    color: var(--text-color-light);
+    text-transform: capitalize;
+}

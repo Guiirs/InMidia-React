@@ -1,0 +1,106 @@
+/* pages/Dashboard/Dashboard.css */
+
+.dashboard-page {
+    width: 100%;
+}
+
+/* Resumo (Cards Superiores) */
+.dashboard-page__summary {
+    display: grid;
+    /* Manter minmax em px aqui é aceitável para responsividade baseada no conteúdo */
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem; /* Mantido */
+    margin-bottom: 3rem; /* Ajustado (era 2rem * 1.5) */
+}
+
+.summary-card {
+    background-color: var(--bg-secondary-color);
+    border-radius: var(--border-radius);
+    padding: 2.4rem; /* Ajustado (era 2rem * 1.2) */
+    display: flex;
+    align-items: center;
+    gap: 2rem; /* Ajustado (era 1.5rem * 1.33) */
+    border: 1px solid var(--input-border);
+}
+
+.summary-card__icon {
+    width: 6rem; /* Ajustado (era 60px) */
+    height: 6rem; /* Ajustado (era 60px) */
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.4rem; /* Ajustado (era 2rem * 1.2) */
+    color: #fff;
+    flex-shrink: 0;
+}
+.summary-card__icon--total { background-color: var(--accent-pink); }
+.summary-card__icon--disponivel { background-color: var(--accent-green); }
+.summary-card__icon--regiao { background-color: var(--accent-yellow); }
+
+.summary-card__info {
+    display: flex;
+    flex-direction: column;
+}
+
+.summary-card__value {
+    font-size: 3.2rem; /* Ajustado (era 2.8rem * 1.14) */
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.summary-card__label {
+    font-size: 1.5rem; /* Ajustado (era 1.4rem * 1.07) */
+    color: var(--text-color-light);
+}
+
+/* --- ESTILOS DE GRÁFICOS (Copiados de Relatorios.css e ajustados) --- */
+.dashboard-page__charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem; /* Mantido */
+}
+
+.dashboard-page__chart-container {
+    background-color: var(--bg-secondary-color);
+    padding: 2.4rem; /* Ajustado (era 1.5rem * 1.6) */
+    border-radius: var(--border-radius);
+    border: 1px solid var(--input-border);
+    box-shadow: var(--box-shadow);
+}
+
+.dashboard-page__chart-title {
+    margin-top: 0;
+    margin-bottom: 2rem; /* Ajustado */
+    font-size: 1.8rem; /* Ajustado (era 1.2rem * 1.5) */
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.dashboard-page__chart-canvas {
+    width: 100% !important; /* Mantido */
+    /* Altura pode ser mantida em px para gráficos ou convertida para rem/vh */
+    height: 350px !important; /* Mantido em px por enquanto */
+    /* Se converter: height: 35rem !important; */
+}
+
+/* Mensagem de erro (reutilizada) */
+.dashboard-page__error {
+    text-align: center;
+    padding: 4rem 1.5rem; /* Ajustado */
+    color: var(--accent-red);
+    font-style: normal;
+    background-color: var(--bg-secondary-color);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--input-border);
+    font-size: 1.6rem; /* Tamanho da fonte da mensagem */
+}
+
+/* Media query para gráficos em telas menores */
+@media (max-width: 992px) { /* Mantido breakpoint */
+    .dashboard-page__charts-grid {
+        grid-template-columns: 1fr; /* Coluna única */
+    }
+}

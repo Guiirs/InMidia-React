@@ -1,0 +1,233 @@
+/* --- Estilos do Componente PlacaCard com BEM --- */
+
+/* Bloco Principal */
+.placa-card {
+    /* Largura máxima pode ser mantida em px se for uma restrição de design,
+       ou convertida para rem (ex: 30rem) se quiser que escale.
+       Manteremos em px por enquanto, mas considere ajustar. */
+    max-width: 300px; /* Ajustado ligeiramente para melhor espaço */
+    margin: 0 auto;
+    width: 100%;
+
+    background-color: var(--bg-secondary-color);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--input-border);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.placa-card:hover {
+    transform: translateY(-0.5rem); /* Ajustado (era -5px) */
+    box-shadow: 0 1.2rem 2.8rem rgba(0,0,0,0.3); /* Ajustado (era px) */
+}
+
+/* Garante que o hover não aconteça se um botão dentro do card estiver focado */
+.placa-card:has(.placa-card__action-button:focus):hover {
+    transform: none;
+    box-shadow: none; /* Usa a sombra padrão definida em :root */
+}
+
+
+/* Elementos do Bloco */
+.placa-card__image-wrapper {
+    width: 100%;
+    height: 18rem; /* Ajustado (era 180px) */
+    background-color: var(--bg-color); /* Fundo enquanto a imagem carrega */
+}
+
+.placa-card__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.placa-card__content {
+    padding: 2rem; /* Ajustado (era 1.5rem * 1.33) */
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Faz esta área crescer para ocupar o espaço */
+}
+
+/* <<< ALTERAÇÃO: Header ajustado para alinhar títulos e status >>> */
+.placa-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start; /* Alinha o status no topo */
+    margin-bottom: 1rem;
+    gap: 0.8rem;
+}
+
+/* <<< NOVO: Container para os títulos >>> */
+.placa-card__header-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem; /* Espaço entre Título e Subtítulo */
+    flex-grow: 1; /* Permite que o texto cresça */
+}
+
+.placa-card__numero {
+    font-size: 1.8rem; /* Ajustado (era 1.25rem * 1.44) */
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0;
+    word-break: break-word; /* Melhor que break-all */
+    line-height: 1.3; /* Ajusta altura da linha */
+}
+
+/* <<< NOVO: Estilo para o número original (Nº: A-101) >>> */
+.placa-card__sub-numero {
+    font-size: 1.3rem;
+    font-weight: 500;
+    color: var(--text-color-light);
+    margin: 0;
+    word-break: break-word;
+}
+
+
+.placa-card__status {
+    padding: 0.4rem 1rem; /* Ajustado */
+    border-radius: 2rem; /* Ajustado (era 20px) */
+    font-size: 1.2rem; /* Ajustado (era 0.8rem * 1.5) */
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 0.2rem; /* Ajuste vertical para alinhar com o novo título */
+}
+
+/* Modificadores para o Status */
+.placa-card__status--disponivel {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: var(--accent-green);
+}
+
+/* Status "Alugada" */
+.placa-card__status--alugada {
+    background-color: rgba(244, 67, 54, 0.1);
+    color: var(--accent-red);
+}
+
+/* Status "Em Manutenção" */
+.placa-card__status--manutencao {
+    background-color: rgba(255, 181, 114, 0.15);
+    color: var(--accent-yellow);
+}
+
+/* --- ESTILOS ADICIONADOS PARA O CLIENTE --- */
+.placa-card__cliente-info {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem; /* Ajustado */
+    color: var(--accent-green);
+    font-size: 1.4rem; /* Ajustado (era 0.9rem * 1.55) */
+    font-weight: 500;
+    margin-bottom: 0.8rem; /* Ajustado */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.placa-card__cliente-info i {
+    color: var(--accent-green);
+    flex-shrink: 0;
+    font-size: 1.4rem; /* Tamanho do ícone */
+}
+/* --- FIM DOS ESTILOS DO CLIENTE --- */
+
+
+.placa-card__location {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem; /* Ajustado */
+    color: var(--text-color-light);
+    margin-bottom: 1.5rem; /* Ajustado */
+    font-size: 1.4rem; /* Ajustado (era 0.9rem * 1.55) */
+}
+.placa-card__location i {
+     flex-shrink: 0;
+     font-size: 1.4rem; /* Tamanho do ícone */
+}
+
+/* Modificador para a localização quando a info do cliente existe */
+.placa-card__location--with-client {
+    margin-bottom: 1.5rem; /* Mantido */
+}
+
+
+.placa-card__footer {
+    margin-top: auto; /* Empurra o rodapé para baixo */
+    padding-top: 1.5rem; /* Ajustado */
+    border-top: 1px solid var(--input-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem; /* Ajustado */
+}
+
+.placa-card__regiao {
+    font-weight: 500;
+    color: var(--text-color);
+    font-size: 1.4rem; /* Tamanho da fonte */
+    /* Adicionado para evitar quebra de layout */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.placa-card__actions {
+    display: flex;
+    gap: 0.8rem; /* Ajustado */
+    flex-shrink: 0;
+}
+
+.placa-card__action-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.4rem; /* Ajustado (era 1rem * 1.4) */
+    padding: 0.8rem; /* Ajustado (era 0.5rem * 1.6) */
+    border-radius: 0.5rem; /* Ajustado (era 5px) */
+    transition: background-color 0.2s ease, color 0.2s ease;
+    /* Tamanho fixo ajustado */
+    width: 3.2rem; /* Ajustado (era 32px) */
+    height: 3.2rem; /* Ajustado (era 32px) */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.placa-card__action-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Botão de Alternância (Manutenção) */
+.placa-card__action-button--toggle {
+    color: var(--text-color-light);
+}
+.placa-card__action-button--toggle.placa-card__action-button--disponivel:hover:not(:disabled) {
+    background-color: rgba(255, 181, 114, 0.1);
+    color: var(--accent-yellow);
+}
+.placa-card__action-button--toggle.placa-card__action-button--indisponivel:hover:not(:disabled) {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: var(--accent-green);
+}
+
+/* Botão Editar */
+.placa-card__action-button--edit {
+    color: var(--accent-yellow);
+}
+.placa-card__action-button--edit:hover:not(:disabled) {
+    background-color: rgba(255, 181, 114, 0.1);
+}
+
+/* Botão Apagar */
+.placa-card__action-button--delete {
+    color: var(--accent-red);
+}
+.placa-card__action-button--delete:hover:not(:disabled) {
+    background-color: rgba(244, 67, 54, 0.1);
+}
