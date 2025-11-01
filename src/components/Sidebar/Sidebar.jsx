@@ -1,133 +1,125 @@
 // src/components/Sidebar/Sidebar.jsx
-import React, { useState, useEffect } from 'react';
-// [MELHORIA] Importamos useLocation para verificar a rota
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useConfirmation } from '../../context/ConfirmationContext';
 import './Sidebar.css';
+import logo from '/assets/img/logo 244.png'; 
 
 function Sidebar() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const showConfirmation = useConfirmation();
-  const userIsAdmin = user?.role === 'admin';
-  
-  // [MELHORIA] Pega a localização atual
-  const location = useLocation();
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
 
-  // --- ALTERAÇÃO AQUI ---
-  // Simplificamos a função. Como /propostas e /contratos agora
-  // são filhos de /empresa-settings (graças à alteração no App.jsx),
-  // só precisamos de verificar a rota pai.
-  const isEmpresaActive = () => {
-      return location.pathname.startsWith('/empresa-settings');
-  };
-  // --- FIM DA ALTERAÇÃO ---
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
 
-  // --- Lógica do Tema (Inalterada do seu arquivo original) ---
-  const [theme, setTheme] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-        document.body.classList.toggle('light-theme', savedTheme === 'light');
-    }
-    return savedTheme || 'dark';
-  });
+    return (
+        <aside className="sidebar">
+            <div className="sidebar__logo">
+                <img src={logo} alt="InMidia" />
+            </div>
+            <nav className="sidebar__nav">
+                <ul>
+                    {/* Item de Dashboard */}
+                    <li>
+                        <NavLink to="/" end>
+                            <i className="fas fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
+                        </NavLink>
+                    </li>
 
-  useEffect(() => {
-    document.body.classList.remove('light-theme');
-    if (theme === 'light') {
-        document.body.classList.add('light-theme');
-    }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+                    {/* === ITEM DE CLIENTES REMOVIDO DESTA LISTA === */}
+                    
+                    {/* Item de Propostas Internas (PIs) */}
+                    <li>
+                        <NavLink to="/pis">
+                            <i className="fas fa-file-alt"></i>
+                            <span>Propostas (PIs)</span>
+                        </NavLink>
+                    </li>
+                    
+                    {/* Item de Contratos */}
+                    <li>
+                        <NavLink to="/contratos">
+                            <i className="fas fa-file-signature"></i>
+                            <span>Contratos</span>
+                        </NavLink>
+                    </li>
+                    
+                    {/* Item de Placas */}
+                    <li>
+                        <NavLink to="/placas">
+                            <i className="fas fa-map-pin"></i>
+                            <span>Placas</span>
+                        </NavLink>
+                    </li>
+                    
+                    {/* Item de Mapa */}
+                    <li>
+                        <NavLink to="/mapa">
+                            <i className="fas fa-map-marked-alt"></i>
+                            <span>Mapa</span>
+                        </NavLink>
+                    </li>
 
-  const handleThemeChange = (e) => {
-    setTheme(e.target.checked ? 'light' : 'dark');
-  };
-  const themeIconClass = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
-  // --- Fim da Lógica do Tema ---
+                    {/* Item de Regiões */}
+                    <li>
+                        <NavLink to="/regioes">
+                            <i className="fas fa-globe-americas"></i>
+                            <span>Regiões</span>
+                        </NavLink>
+                    </li>
+                    
+                    {/* Item de Relatórios */}
+                    <li>
+                        <NavLink to="/relatorios">
+                            <i className="fas fa-chart-line"></i>
+                            <span>Relatórios</span>
+                        </NavLink>
+                    </li>
 
-  // --- Lógica do Logout (Inalterada do seu arquivo original) ---
-  const handleLogout = async (e) => {
-    e.preventDefault();
-    try {
-      await showConfirmation({
-        message: 'Tem a certeza de que deseja sair da sua conta?',
-        title: 'Confirmar Logout',
-        confirmText: 'Sair',
-        cancelText: 'Cancelar',
-        confirmButtonType: 'red',
-      });
-      logout();
-      navigate('/login', { replace: true });
-    } catch (error) {
-      if (error.message === "Ação cancelada pelo usuário.") {
-         console.log("Logout cancelado.");
-      } else {
-         console.error("Erro no modal de confirmação:", error);
-      }
-    }
-  };
-  
-  return (
-    // [ESTRUTURA ORIGINAL MANTIDA]
-    <aside className="sidebar">
-      <div className="sidebar__header">
-        <NavLink to="/dashboard" className="sidebar__logo-container" data-link>
-          <img src="/assets/img/logo 244.png" alt="Logo InMidia" className="sidebar__logo-img" />
-          <span className="sidebar__logo-text">InMidia</span>
-        </NavLink>
-      </div>
+                    {/* Divisor */}
+                    <li className="sidebar__divider"></li>
 
-      <nav className="sidebar__nav-container">
-        <ul className="sidebar__nav">
-          <li><NavLink to="/dashboard" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-home"></i> <span>Dashboard</span></NavLink></li>
-          <li><NavLink to="/placas" end={false} className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-th-large"></i> <span>Placas</span></NavLink></li>
-          <li><NavLink to="/clientes" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-users"></i> <span>Clientes</span></NavLink></li>
-          <li><NavLink to="/regioes" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-map-marked-alt"></i> <span>Regiões</span></NavLink></li>
-          <li><NavLink to="/map" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-map"></i> <span>Mapa</span></NavLink></li>
-          <li><NavLink to="/relatorios" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-chart-pie"></i> <span>Relatórios</span></NavLink></li>
-          
-          {/* Links de Propostas e Contratos removidos daqui (correto) */}
+                    {/* Item de Configurações da Empresa */}
+                    <li>
+                        <NavLink to="/empresa">
+                            <i className="fas fa-building"></i>
+                            <span>Área da Empresa</span>
+                        </NavLink>
+                    </li>
+                    
+                    {/* Item de Perfil do Usuário */}
+                    <li>
+                        <NavLink to="/perfil">
+                            <i className="fas fa-user"></i>
+                            <span>Meu Perfil</span>
+                        </NavLink>
+                    </li>
 
-          {userIsAdmin && (
-            <li><NavLink to="/admin-users" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-shield-alt"></i> <span>Admin</span></NavLink></li>
-          )}
-        </ul>
-      </nav>
-
-      <div className="sidebar__footer">
-        <NavLink to="/user" className={({ isActive }) => `sidebar__nav-link ${isActive ? 'sidebar__nav-link--active' : ''}`} data-link><i className="fas fa-user"></i> <span>Meu Perfil</span></NavLink>
-        
-        {/* [MELHORIA APLICADA AQUI] */}
-        <NavLink 
-          to="/empresa-settings" 
-          // Usa a nova função 'isEmpresaActive'
-          className={`sidebar__nav-link ${isEmpresaActive() ? 'sidebar__nav-link--active' : ''}`} 
-          data-link
-        >
-          <i className="fas fa-cog"></i> <span>Empresa</span>
-        </NavLink>
-        
-        <div className="sidebar__theme-switcher">
-          <i className={themeIconClass}></i>
-          <span>Modo Claro</span>
-          <label className="switch">
-            <input
-              type="checkbox"
-              id="theme-toggle"
-              checked={theme === 'light'}
-              onChange={handleThemeChange}
-            />
-            <span className="slider"></span>
-          </label>
-        </div>
-        <a href="#" className="sidebar__nav-link" id="logout-button" onClick={handleLogout}>
-          <i className="fas fa-sign-out-alt"></i> <span>Sair</span>
-        </a>
-      </div>
-    </aside>
-  );
+                    {/* Links de Admin (se aplicável) */}
+                    {user && user.role === 'admin' && (
+                        <>
+                            <li className="sidebar__divider"></li>
+                            <li>
+                                <NavLink to="/admin/users">
+                                    <i className="fas fa-users-cog"></i>
+                                    <span>Admin Usuários</span>
+                                </NavLink>
+                            </li>
+                        </>
+                    )}
+                </ul>
+            </nav>
+            <div className="sidebar__footer">
+                <button onClick={handleLogout} className="sidebar__logout">
+                    <i className="fas fa-sign-out-alt"></i>
+                    <span>Sair</span>
+                </button>
+            </div>
+        </aside>
+    );
 }
 
 export default Sidebar;

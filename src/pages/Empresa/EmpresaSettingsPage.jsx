@@ -1,86 +1,59 @@
 // src/pages/Empresa/EmpresaSettingsPage.jsx
 import React from 'react';
-// [MELHORIA] Importamos Outlet e NavLink para a navegação interna
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { NavLink, Outlet } from 'react-router-dom';
 import './EmpresaSettings.css';
 
+/**
+ * Página de layout para as configurações da Empresa.
+ * Contém a navegação em abas e o <Outlet> para renderizar as sub-rotas.
+ */
 function EmpresaSettingsPage() {
-  const { user } = useAuth();
-  const location = useLocation();
+    return (
+        <div className="page-container">
+            <div className="page-header">
+                <h1>Área da Empresa</h1>
+                <p>Gestão de dados cadastrais, API e clientes.</p>
+            </div>
 
-  // Se a rota for exatamente /empresa-settings, define qual aba é a padrão
-  const isRootPath = location.pathname === '/empresa-settings';
+            <div className="settings-layout">
+                {/* Navegação das Abas */}
+                <nav className="settings-layout__nav">
+                    <ul>
+                        <li>
+                            <NavLink to="detalhes" end>
+                                <i className="fas fa-info-circle"></i>
+                                <span>Detalhes da Empresa</span>
+                            </NavLink>
+                        </li>
+                        <li>
+                            <NavLink to="api-key">
+                                <i className="fas fa-key"></i>
+                                <span>API Key (Integração)</span>
+                            </NavLink>
+                        </li>
+                        
+                        {/* === ABA DE CLIENTES ADICIONADA AQUI === */}
+                        <li>
+                            <NavLink to="clientes">
+                                <i className="fas fa-users"></i>
+                                <span>Meus Clientes</span>
+                            </NavLink>
+                        </li>
+                    </ul>
+                </nav>
 
-  // --- CORREÇÃO AQUI ---
-  // Criamos uma função helper para o className, 
-  // para que 'active' seja aplicado a todos os NavLinks.
-  const getNavLinkClass = ({ isActive }) => {
-    return `empresa-settings-page__nav-link ${isActive ? 'active' : ''}`;
-  };
-
-  // Esta classe especial é SÓ para o 'Detalhes', para que ele
-  // fique ativo quando estiver na raiz /empresa-settings
-  const getDetalhesClass = ({ isActive }) => {
-     return `empresa-settings-page__nav-link ${(isActive || isRootPath) ? 'active' : ''}`;
-  };
-  // --- FIM DA CORREÇÃO ---
-
-  return (
-    <div className="empresa-settings-page">
-      
-      {/* [MELHORIA] Nova barra de navegação interna (Abas) */}
-      <div className="empresa-settings-page__nav">
-        <NavLink
-          to="/empresa-settings/detalhes" // O 'to' estava correto
-          className={getDetalhesClass} // Aplicamos a classe helper
-        >
-          <i className="fas fa-building"></i>
-          Detalhes
-        </NavLink>
-        
-        {/* Só mostra a aba de API Key se for Admin */}
-        {user?.role === 'admin' && (
-          <NavLink
-            to="/empresa-settings/api" // O 'to' estava correto
-            className={getNavLinkClass} // Aplicamos a classe helper
-          >
-            <i className="fas fa-key"></i>
-            API Key
-          </NavLink>
-        )}
-
-        {/* --- CORREÇÃO PRINCIPAL AQUI --- */}
-        {/* Os links devem ser relativos para carregar no <Outlet /> */}
-
-        <NavLink
-          to="/propostas" // Alterado de "/propostas" para "propostas"
-          className={getNavLinkClass} // Aplicamos a classe helper
-        >
-          <i className="fas fa-file-invoice-dollar"></i>
-          Gestão (PIs)
-        </NavLink> 
-        
-        <NavLink
-          to="/contratos" // Alterado de "/contratos" para "contratos"
-          className={getNavLinkClass} // Aplicamos a classe helper
-        >
-          <i className="fas fa-file-invoice-dollar"></i>
-          Gestão (Contratos)
-        </NavLink>
-        {/* --- FIM DA CORREÇÃO --- */}
-
-      </div>
-
-      {/* [MELHORIA] Conteúdo da Sub-página 
-        O React Router irá renderizar as rotas aninhadas (como 'detalhes' e 'api') aqui.
-      */}
-      <div className="empresa-settings-page__content">
-        <Outlet />
-      </div>
-
-    </div>
-  );
+                {/* Conteúdo da Aba Ativa */}
+                <main className="settings-layout__content">
+                    {/* O <Outlet> renderiza a rota filha correspondente:
+                        /empresa/detalhes -> <EmpresaDetalhes />
+                        /empresa/api-key  -> <EmpresaApiKey />
+                        /empresa/clientes -> <ClientesPage />
+                    */}
+                    <Outlet />
+                </main>
+            </div>
+        </div>
+    );
 }
 
 export default EmpresaSettingsPage;

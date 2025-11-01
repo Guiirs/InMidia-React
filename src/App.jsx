@@ -1,110 +1,129 @@
 // src/App.jsx
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'; // TEM QUE ESTAR AQUI
+import { AuthProvider } from './context/AuthContext';
+import { ConfirmationProvider } from './context/ConfirmationContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
-// Componentes de Rota/Globais
+// Layouts
+import MainLayout from './layouts/MainLayout/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute';
-import AdminRoute from './components/AdminRoute/AdminRoute.jsx';
-import ToastNotification from './components/ToastNotification/ToastNotification';
+import AdminRoute from './components/AdminRoute/AdminRoute';
+
+// Componentes
 import Spinner from './components/Spinner/Spinner';
+import ToastNotification from './components/ToastNotification/ToastNotification';
+import NotFoundPage from './pages/NotFound/NotFoundPage';
+import ApiStatusPage from './pages/ApiStatus/ApiStatusPage';
 
-// Componente de Fallback
-const FullPageSpinner = () => (
-  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-color)' }}>
-    <Spinner message="A carregar página..." />
-  </div>
-);
+// Páginas Públicas
+import LoginPage from './pages/Login/LoginPage';
+import RegisterPage from './pages/Register/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPassword/ForgotPasswordPage';
 
-// Lazy-load (Carregamento dinâmico) de todas as Páginas e o Layout
-const MainLayout = lazy(() => import('./layouts/MainLayout/MainLayout'));
-const ApiStatusPage = lazy(() => import('./pages/ApiStatus/ApiStatusPage'));
-const LoginPage = lazy(() => import('./pages/Login/LoginPage'));
+// Páginas Protegidas (Lazy Loaded)
 const DashboardPage = lazy(() => import('./pages/Dashboard/DashboardPage'));
-const NotFoundPage = lazy(() => import('./pages/NotFound/NotFoundPage'));
-const PlacasPage = lazy(() => import('./pages/Placas/PlacasPage'));
 const ClientesPage = lazy(() => import('./pages/Clientes/ClientesPage'));
-const RegioesPage = lazy(() => import('./pages/Regioes/RegioesPage'));
-const MapPage = lazy(() => import('./pages/Map/MapPage'));
-const RelatoriosPage = lazy(() => import('./pages/Relatorios/RelatoriosPage'));
-const UserPage = lazy(() => import('./pages/User/UserPage'));
+const PIsPage = lazy(() => import('./pages/PIs/PIsPage'));
+const ContratosPage = lazy(() => import('./pages/Contratos/ContratosPage'));
+const PlacasPage = lazy(() => import('./pages/Placas/PlacasPage'));
 const PlacaFormPage = lazy(() => import('./pages/PlacaFormPage/PlacaFormPage'));
 const PlacaDetailsPage = lazy(() => import('./pages/PlacaDetailsPage/PlacaDetailsPage'));
-const RegisterPage = lazy(() => import('./pages/Register/RegisterPage'));
-const ForgotPasswordPage = lazy(() => import('./pages/ForgotPassword/ForgotPasswordPage'));
+const MapPage = lazy(() => import('./pages/Map/MapPage'));
+const RegioesPage = lazy(() => import('./pages/Regioes/RegioesPage'));
+const RelatoriosPage = lazy(() => import('./pages/Relatorios/RelatoriosPage'));
+const UserPage = lazy(() => import('./pages/User/UserPage'));
 const AdminUsersPage = lazy(() => import('./pages/Admin/AdminUsersPage'));
-const PIsPage = lazy(() => import('./pages/PIs/PIsPage'));
-
-// [MELHORIA] Importa o layout da página Empresa e as novas sub-páginas
 const EmpresaSettingsPage = lazy(() => import('./pages/Empresa/EmpresaSettingsPage'));
 const EmpresaDetalhes = lazy(() => import('./pages/Empresa/subpages/EmpresaDetalhes'));
 const EmpresaApiKey = lazy(() => import('./pages/Empresa/subpages/EmpresaApiKey'));
 
-// --- ALTERAÇÃO AQUI ---
-// 1. Importe a nova página de Contratos (que ainda vamos criar)
-const ContratosPage = lazy(() => import('./pages/Contratos/ContratosPage'));
-// ---------------------
 
+// Configuração do React Query Client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, 
+      retry: (failureCount, error) => {
+        if (error.response?.status === 401 || error.response?.status === 404) {
+          return false;
+        }
+        return failureCount < 2; 
+      },
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function App() {
   return (
-    <> 
-      <Suspense fallback={<FullPageSpinner />}>
-        <Routes>
-          {/* ... (Rotas públicas: /status, /login, etc.) ... */}
-          <Route path="/" element={<Navigate to="/status" replace />} /> 
-          <Route path="/status" element={<ApiStatusPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/empresa-register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <ConfirmationProvider>
+          {/* O ÚNICO BROWSER ROUTER DEVE ESTAR AQUI */}
+          <BrowserRouter>
+            <Suspense fallback={<div className="page-loading-spinner"><Spinner /></div>}>
+              <Routes>
+                {/* Rotas Públicas */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/api-status" element={<ApiStatusPage />} />
 
+                {/* Rotas Protegidas (Layout Principal) */}
+                <Route 
+                  element={
+                    <ProtectedRoute>
+                      <MainLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<DashboardPage />} />
+                  
+                  {/* Esta é a rota que estávamos a testar */}
+                  <Route path="/clientes" element={<ClientesPage />} />
+                  
+                  <Route path="/pis" element={<PIsPage />} />
+                  <Route path="/contratos" element={<ContratosPage />} />
+                  <Route path="/placas" element={<PlacasPage />} />
+                  <Route path="/placas/nova" element={<PlacaFormPage />} />
+                  <Route path="/placas/editar/:id" element={<PlacaFormPage />} />
+                  <Route path="/placas/:id" element={<PlacaDetailsPage />} />
+                  <Route path="/mapa" element={<MapPage />} />
+                  <Route path="/regioes" element={<RegioesPage />} />
+                  <Route path="/relatorios" element={<RelatoriosPage />} />
+                  <Route path="/perfil" element={<UserPage />} />
 
-          {/* === ROTAS PRIVADAS === */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<MainLayout />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/placas" element={<PlacasPage />} />
-              <Route path="/placas/novo" element={<PlacaFormPage />} />
-              <Route path="/placas/editar/:id" element={<PlacaFormPage />} /> 
-              <Route path="/placas/:id" element={<PlacaDetailsPage />} />
-              <Route path="/clientes" element={<ClientesPage />} />
-              <Route path="/regioes" element={<RegioesPage />} />
-              <Route path="/map" element={<MapPage />} />
-              <Route path="/relatorios" element={<RelatoriosPage />} />
-              <Route path="/user" element={<UserPage />} />
-              
-              {/* Rota de Empresa (como estava no seu original) */}
-              <Route path="/empresa-settings" element={<EmpresaSettingsPage />}>
-                <Route index element={<Navigate to="detalhes" replace />} />
-                <Route path="detalhes" element={<EmpresaDetalhes />} />
-                
-                <Route element={<AdminRoute />}>
-                  <Route path="api" element={<EmpresaApiKey />} />
+                  {/* Área da Empresa (Sem Clientes por agora) */}
+                  <Route path="/empresa" element={<EmpresaSettingsPage />}>
+                    <Route index element={<Navigate to="detalhes" replace />} />
+                    <Route path="detalhes" element={<EmpresaDetalhes />} />
+                    <Route path="api-key" element={<EmpresaApiKey />} />
+                  </Route>
+
+                  {/* Admin */}
+                  <Route 
+                    path="/admin/users" 
+                    element={
+                      <AdminRoute>
+                        <AdminUsersPage />
+                      </AdminRoute>
+                    } 
+                  />
+                  
+                  <Route path="*" element={<NotFoundPage />} />
                 </Route>
-              </Route>
-              
-              {/* Rota de Gestão (PIs) (como estava no seu original) */}
-              <Route path="/propostas" element={<PIsPage />} />
-              
-              {/* --- ALTERAÇÃO AQUI --- */}
-              {/* 2. Adicione a rota para a nova página de Contratos */}
-              <Route path="/contratos" element={<ContratosPage />} />
-              {/* --------------------- */}
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+          {/* FIM DO BROWSER ROUTER */}
 
-              {/* Rotas de Admin */}
-              <Route element={<AdminRoute />}>
-                 <Route path="/admin-users" element={<AdminUsersPage />} />
-              </Route>
-              
-            </Route> {/* Fim do MainLayout */}
-          </Route> {/* Fim do ProtectedRoute */}
-
-          {/* === ROTA NOT FOUND (404) === */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </Suspense>
-
-      <ToastNotification />
-    </>
+          <ToastNotification />
+        </ConfirmationProvider>
+      </AuthProvider>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   );
 }
 

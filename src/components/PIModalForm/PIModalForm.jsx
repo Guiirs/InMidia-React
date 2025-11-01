@@ -39,12 +39,12 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
     const [currentStep, setCurrentStep] = useState(1);
 
     // --- 1. Lógica de Clientes ---
-    // Esta lista é necessária para o dropdown de clientes na Etapa 1.
+    // Busca clientes via React Query. 'clientes' será undefined ou o array.
     const { data: clientes = [], isLoading: isLoadingClientes } = useQuery({
         queryKey: ['clientes', 'all'], 
         queryFn: () => fetchClientes(new URLSearchParams({ limit: 1000 })),
-        select: (data) => data.data ?? [],
-        staleTime: 1000 * 60 * 10
+        select: (data) => data.data ?? [], // Garante que 'clientes' seja sempre um array
+        staleTime: 1000 * 60 * 10 // Cache de 10 minutos
     });
 
     // --- 2. Lógica do Formulário (React Hook Form) ---
@@ -104,47 +104,59 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
     // --- 4. Efeitos de Inicialização ---
 
     // Efeito principal: Inicializa o formulário com dados de edição (initialData)
-    // E garante que os dados sejam aplicados logo após os clientes serem carregados.
-    // [CORREÇÃO DE SINCRONIZAÇÃO DE CLIENTES]
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // [CORREÇÃO/DEBUG] Adicionado logs para diagnosticar o problema de "cliente não carregar".
     useEffect(() => {
-        console.log("%c[PIModalForm] EFEITO: Inicializando Formulário e Steps.", "color: red; font-weight: bold;");
-        
-        // Só tenta resetar se os clientes estiverem carregados, garantindo que o dropdown não fique vazio
-        if (isLoadingClientes) return;
+        console.log("%c[PIModalForm] EFEITO: Tentando inicializar formulário...", "color: blue;");
+
+        // 1. Se os clientes ainda estão carregando (isLoadingClientes = true), não faz nada.
+        // O React vai rodar este efeito de novo quando isLoadingClientes mudar para false.
+        // Isso previne a "race condition" de resetar o form antes dos clientes existirem.
+        if (isLoadingClientes) {
+            console.log("%c[PIModalForm] ...Aguardando clientes.", "color: gray;");
+            return;
+        }
+
+        // Se chegou aqui, isLoadingClientes é false.
+        console.log(`%c[PIModalForm] ...Clientes carregados (${clientes.length} encontrados).`, "color: green;");
+        console.log("[PIModalForm] InitialData recebido:", initialData);
 
         const cliente = initialData.cliente || {};
         
-        // Construímos o objeto de reset com os valores de initialData
+        // 2. Construímos o objeto de reset com os valores de initialData
         const resetData = {
-            clienteId: cliente._id || initialData.cliente || '', // Aplica o ID do cliente carregado
+            clienteId: cliente._id || initialData.cliente || '', // Tenta pegar o _id do objeto, ou o ID solto
             tipoPeriodo: initialData.tipoPeriodo || 'mensal',
             dataInicio: initialData.dataInicio ? formatDateForInput(initialData.dataInicio) : today,
             dataFim: initialData.dataFim ? formatDateForInput(initialData.dataFim) : '',
             valorTotal: initialData.valorTotal || 0,
             descricao: initialData.descricao || '',
-            responsavel: cliente.responsavel || '',
-            segmento: cliente.segmento || '',
+            responsavel: cliente.responsavel || '', // Campo extra do Step 1
+            segmento: cliente.segmento || '',     // Campo extra do Step 1
             formaPagamento: initialData.formaPagamento || '',
-            placas: initialData.placas?.map(p => p._id || p) || []
+            placas: initialData.placas?.map(p => p._id || p) || [] // Garante que temos apenas os IDs
         };
 
-        // Reseta o formulário com os valores
+        console.log("[PIModalForm] Resetando formulário com:", resetData);
+
+        // 3. Reseta o formulário com os valores
         reset(resetData);
         setCurrentStep(1); // Garante que começa no Step 1
 
-    // Depende de initialData (troca de modal) e isLoadingClientes (dados carregados)
-    // Se isLoadingClientes for removido, o form inicializará com campos vazios e resetará após o fetch.
-    // Manter a dependência garante que reset seja chamado apenas uma vez, quando os dados estiverem prontos.
-    }, [initialData, isLoadingClientes, reset]); 
+    // A dependência [isLoadingClientes] é INTENCIONAL e CORRETA.
+    // Queremos que este efeito rode QUANDO os dados de initialData mudam (ex: editar outra PI)
+    // E TAMBÉM quando os clientes terminam de carregar (isLoadingClientes muda de true para false).
+    // Adicionado 'clientes' apenas para garantir que o log reflita o estado mais recente.
+    }, [initialData, isLoadingClientes, reset, clientes]); 
 
 
     // Handler de Submissão Final
     const handleFormSubmit = (data) => {
+        // Remove os campos extras (responsavel, segmento) que são só de exibição
         const { responsavel, segmento, ...piData } = data;
         onSubmit(piData, setModalError); 
     };
     
+    // O loading geral do modal considera o submit ou o carregamento inicial de clientes
     const isLoading = isSubmitting || isLoadingClientes;
 
 
@@ -153,7 +165,12 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
     const renderStepContent = () => {
         // Props comuns que todo Step precisa
         const commonProps = { 
-            register, errors: modalErrors, isSubmitting, control, watch, setValue, 
+            register, 
+            errors: modalErrors, 
+            isSubmitting, 
+            control, 
+            watch, 
+            setValue, 
             clientes, // Passa a lista de clientes para Step 1
             isLoadingClientes // Passa o status de loading para Step 1
         };
@@ -173,6 +190,9 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
                         name="placas"
                         isSubmitting={isSubmitting}
                         initialData={initialData} // Usado para reset interno do filtro
+                        // Passa as datas para o seletor de placas poder usá-las
+                        dataInicio={watch('dataInicio')}
+                        dataFim={watch('dataFim')}
                     />
                 );
             case 3:
@@ -227,7 +247,7 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
                         type="button" 
                         className="modal-form__button modal-form__button--confirm" 
                         onClick={nextStep}
-                        disabled={isLoading}
+                        disabled={isLoading} // Desativa se estiver carregando clientes ou submetendo
                     >
                         Próximo &rarr;
                     </button>

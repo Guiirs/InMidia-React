@@ -108,7 +108,6 @@ apiClient.interceptors.response.use(
 // -----------------------------------------------------------------------------
 
 // --- ROTAS PÚBLICAS ---
-
 export const registerEmpresa = async (empresaData) => {
     try {
         const response = await apiClient.post('/empresas/register', empresaData, { isPublic: true });
@@ -142,6 +141,7 @@ export const requestPasswordReset = async (email) => {
 
 // --- ROTAS PROTEGIDAS ---
 
+// --- Placas ---
 export const fetchRegioes = async () => {
     try {
         const response = await apiClient.get('/regioes');
@@ -221,6 +221,18 @@ export const fetchPlacaLocations = async () => {
     }
 };
 
+export const fetchPlacasDisponiveis = async (dataInicio, dataFim) => {
+    try {
+        const params = new URLSearchParams({ dataInicio, dataFim });
+        const response = await apiClient.get(`/placas/disponiveis?${params.toString()}`);
+        return response.data;
+    } catch (error) {
+        if (import.meta.env.DEV) console.error('[API fetchPlacasDisponiveis] Erro:', error);
+        throw error;
+    }
+};
+
+// --- Regiões ---
 export const createRegiao = async (data) => {
     try {
         const response = await apiClient.post('/regioes', data);
@@ -313,14 +325,11 @@ export const updateEmpresaDetails = async (data) => {
 };
 
 // --- Rotas de Clientes ---
-/**
- * @param {URLSearchParams} params - Parâmetros de query (page, limit, etc.)
- */
 export const fetchClientes = async (params) => {
     try {
-        const queryString = params ? `?${params.toString()}` : ''; // Adiciona params à query
+        const queryString = params ? `?${params.toString()}` : '';
         const response = await apiClient.get(`/clientes${queryString}`);
-        return response.data; // Retorna o objeto { data: [...], pagination: ... }
+        return response.data; 
     } catch (error) {
         if (import.meta.env.DEV) console.error('[API fetchClientes] Erro:', error);
         throw error;
@@ -542,7 +551,6 @@ export const downloadPI_PDF = async (id) => {
                 ?.replace(/"/g, '') || `PI_${id}.pdf`
         };
     } catch (error) {
-        // Lógica de tratamento de erro de blob
         if (error.response && error.response.data instanceof Blob) {
              try {
                 const errorJson = JSON.parse(await error.response.data.text());
@@ -556,6 +564,41 @@ export const downloadPI_PDF = async (id) => {
 
 
 // --- [NOVO] Rotas de Contratos ---
+
+// =============================================================================
+// == FUNÇÕES ADICIONADAS AQUI ==
+// =============================================================================
+
+export const fetchContratos = async (params) => {
+    try {
+        const response = await apiClient.get(`/contratos?${params.toString()}`);
+        return response.data;
+    } catch (error) {
+        if (import.meta.env.DEV) console.error('[API fetchContratos] Erro:', error);
+        throw error;
+    }
+};
+
+export const updateContrato = async (id, data) => {
+    try {
+        const response = await apiClient.put(`/contratos/${id}`, data);
+        return response.data;
+    } catch (error) {
+        if (import.meta.env.DEV) console.error(`[API updateContrato ${id}] Erro:`, error);
+        throw error;
+    }
+};
+
+export const deleteContrato = async (id) => {
+    try {
+        await apiClient.delete(`/contratos/${id}`);
+    } catch (error) {
+        if (import.meta.env.DEV) console.error(`[API deleteContrato ${id}] Erro:`, error);
+        throw error;
+    }
+};
+// =============================================================================
+
 export const createContrato = async (piId) => {
     try {
         const response = await apiClient.post('/contratos', { piId });
@@ -578,7 +621,6 @@ export const downloadContrato_PDF = async (id) => {
                 ?.replace(/"/g, '') || `Contrato_${id}.pdf`
         };
     } catch (error) {
-        // Lógica de tratamento de erro de blob
         if (error.response && error.response.data instanceof Blob) {
              try {
                 const errorJson = JSON.parse(await error.response.data.text());
