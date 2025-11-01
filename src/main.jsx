@@ -1,7 +1,7 @@
 // src/main.jsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom'; // <-- 1. ADICIONE ESTA LINHA DE VOLTA
 // 1. Importar QueryClient e QueryClientProvider
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 // 2. Importar o Devtools (opcional, mas recomendado)
@@ -26,6 +26,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     {/* 4. Envolver a aplicação com o Provider */}
     <QueryClientProvider client={queryClient}>
+      {/* 2. O ÚNICO ROUTER DEVE FICAR AQUI */}
       <BrowserRouter>
         <AuthProvider>
           <ConfirmationProvider> 
@@ -33,6 +34,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           </ConfirmationProvider>
         </AuthProvider>
       </BrowserRouter>
+      {/* FIM DO ROUTER */}
+
       {/* 5. Adicionar o Devtools (só aparece em desenvolvimento) */}
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

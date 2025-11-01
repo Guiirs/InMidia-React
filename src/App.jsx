@@ -1,10 +1,13 @@
-// src/App.jsx
+// src/App.jsx (Corrigido)
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'; // TEM QUE ESTAR AQUI
-import { AuthProvider } from './context/AuthContext';
-import { ConfirmationProvider } from './context/ConfirmationContext';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+// 1. REMOVA O "BrowserRouter" DESTA LINHA
+import { Routes, Route, Navigate } from 'react-router-dom'; 
+
+// 2. REMOVA AS IMPORTAÇÕES DOS PROVIDERS (JÁ ESTÃO EM MAIN.JSX)
+// import { AuthProvider } from './context/AuthContext';
+// import { ConfirmationProvider } from './context/ConfirmationContext';
+// import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+// import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
 // Layouts
 import MainLayout from './layouts/MainLayout/MainLayout';
@@ -39,91 +42,69 @@ const EmpresaSettingsPage = lazy(() => import('./pages/Empresa/EmpresaSettingsPa
 const EmpresaDetalhes = lazy(() => import('./pages/Empresa/subpages/EmpresaDetalhes'));
 const EmpresaApiKey = lazy(() => import('./pages/Empresa/subpages/EmpresaApiKey'));
 
-
-// Configuração do React Query Client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, 
-      retry: (failureCount, error) => {
-        if (error.response?.status === 401 || error.response?.status === 404) {
-          return false;
-        }
-        return failureCount < 2; 
-      },
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+// 3. REMOVA A CONFIGURAÇÃO DUPLICADA DO queryClient
+// const queryClient = new QueryClient({ ... });
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ConfirmationProvider>
-          {/* O ÚNICO BROWSER ROUTER DEVE ESTAR AQUI */}
-          <BrowserRouter>
-            <Suspense fallback={<div className="page-loading-spinner"><Spinner /></div>}>
-              <Routes>
-                {/* Rotas Públicas */}
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                <Route path="/api-status" element={<ApiStatusPage />} />
+    // 4. REMOVA OS WRAPPERS (Providers e BrowserRouter)
+    <>
+      <Suspense fallback={<div className="page-loading-spinner"><Spinner /></div>}>
+        <Routes>
+          {/* Rotas Públicas */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/api-status" element={<ApiStatusPage />} />
 
-                {/* Rotas Protegidas (Layout Principal) */}
-                <Route 
-                  element={
-                    <ProtectedRoute>
-                      <MainLayout />
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route index element={<DashboardPage />} />
-                  
-                  {/* Esta é a rota que estávamos a testar */}
-                  <Route path="/clientes" element={<ClientesPage />} />
-                  
-                  <Route path="/pis" element={<PIsPage />} />
-                  <Route path="/contratos" element={<ContratosPage />} />
-                  <Route path="/placas" element={<PlacasPage />} />
-                  <Route path="/placas/nova" element={<PlacaFormPage />} />
-                  <Route path="/placas/editar/:id" element={<PlacaFormPage />} />
-                  <Route path="/placas/:id" element={<PlacaDetailsPage />} />
-                  <Route path="/mapa" element={<MapPage />} />
-                  <Route path="/regioes" element={<RegioesPage />} />
-                  <Route path="/relatorios" element={<RelatoriosPage />} />
-                  <Route path="/perfil" element={<UserPage />} />
+          {/* Rotas Protegidas (Layout Principal) */}
+          <Route 
+            element={
+              <ProtectedRoute>
+                <MainLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<DashboardPage />} />
+            
+            {/* ... (Suas rotas) ... */}
+            <Route path="/clientes" element={<ClientesPage />} />
+            <Route path="/pis" element={<PIsPage />} />
+            <Route path="/contratos" element={<ContratosPage />} />
+            <Route path="/placas" element={<PlacasPage />} />
+            <Route path="/placas/nova" element={<PlacaFormPage />} />
+            <Route path="/placas/editar/:id" element={<PlacaFormPage />} />
+            <Route path="/placas/:id" element={<PlacaDetailsPage />} />
+            <Route path="/mapa" element={<MapPage />} />
+            <Route path="/regioes" element={<RegioesPage />} />
+            <Route path="/relatorios" element={<RelatoriosPage />} />
+            <Route path="/perfil" element={<UserPage />} />
 
-                  {/* Área da Empresa (Sem Clientes por agora) */}
-                  <Route path="/empresa" element={<EmpresaSettingsPage />}>
-                    <Route index element={<Navigate to="detalhes" replace />} />
-                    <Route path="detalhes" element={<EmpresaDetalhes />} />
-                    <Route path="api-key" element={<EmpresaApiKey />} />
-                  </Route>
+            {/* Área da Empresa (Sem Clientes por agora) */}
+            <Route path="/empresa" element={<EmpresaSettingsPage />}>
+              <Route index element={<Navigate to="detalhes" replace />} />
+              <Route path="detalhes" element={<EmpresaDetalhes />} />
+              <Route path="api-key" element={<EmpresaApiKey />} />
+            </Route>
 
-                  {/* Admin */}
-                  <Route 
-                    path="/admin/users" 
-                    element={
-                      <AdminRoute>
-                        <AdminUsersPage />
-                      </AdminRoute>
-                    } 
-                  />
-                  
-                  <Route path="*" element={<NotFoundPage />} />
-                </Route>
-              </Routes>
-            </Suspense>
-          </BrowserRouter>
-          {/* FIM DO BROWSER ROUTER */}
-
-          <ToastNotification />
-        </ConfirmationProvider>
-      </AuthProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
+            {/* Admin */}
+            <Route 
+              path="/admin/users" 
+              element={
+                <AdminRoute>
+                  <AdminUsersPage />
+                </AdminRoute>
+              } 
+            />
+            
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+        </Routes>
+      </Suspense>
+      {/* O ToastNotification deve ficar fora das Routes */}
+      <ToastNotification />
+    </>
+    // FIM DAS REMOÇÕES
   );
 }
 
