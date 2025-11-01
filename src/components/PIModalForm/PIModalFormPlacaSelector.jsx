@@ -1,28 +1,23 @@
 // src/components/PIModalForm/PIModalFormPlacaSelector.jsx
-import React from 'react';
+import React, { useState, useMemo, useEffect } from 'react'; 
 import PropTypes from 'prop-types';
 import { useController } from 'react-hook-form';
-// REMOVIDO: import { usePlacaFilters } from '../../hooks/usePlacaFilters';
+import { useQuery } from '@tanstack/react-query';
+import { fetchPlacas, fetchRegioes } from '../../services/api';
+import { useDebounce } from '../../hooks/useDebounce'; 
 
-// Este componente agora é "burro". Ele recebe toda a lógica como props.
+/**
+ * Este componente agora é "inteligente" (smart component), contendo toda a lógica
+ * de estado e busca de filtros, isolando-o de re-renderizações desnecessárias do pai.
+ */
 function PIModalFormPlacaSelector({ 
     control, 
     name, 
     isSubmitting,
-    
-    // --- Novas props recebidas do componente-pai ---
-    isLoading,
-    regioes,
-    availablePlacas,
-    selectedPlacasObjects,
-    getRegiaoNome,
-    selectedRegiao,
-    setSelectedRegiao,
-    placaSearch,
-    setPlacaSearch
+    initialData, // Recebe a prop do pai para resetar
 }) {
     
-    // Liga-se ao RHF (React Hook Form)
+    // --- 1. Lógica do Formulário (RHF) ---
     const { 
         field: { value: watchedPlacas, onChange: setWatchedPlacas }, 
         fieldState: { error: placaError } 
@@ -34,9 +29,90 @@ function PIModalFormPlacaSelector({
         } 
     });
 
-    // O hook 'usePlacaFilters' foi MOVIDO para o componente-pai
+    // --- 2. Estado Interno dos Filtros (Persistente) ---
+    const [selectedRegiao, setSelectedRegiao] = useState('');
+    const [placaSearch, setPlacaSearch] = useState('');
+    const debouncedPlacaSearch = useDebounce(placaSearch, 300);
 
-    // Handlers de Seleção (chamam a função 'onChange' do RHF)
+    // --- [MECANISMO DE RESET EXPLÍCITO] ---
+    // Reseta o estado local de filtros quando o modal abre (i.e., initialData muda)
+    useEffect(() => {
+        console.log("[Selector] Resetando filtros internos devido a nova initialData.");
+        setSelectedRegiao('');
+        setPlacaSearch('');
+    // Roda apenas quando a referência do objeto initialData muda.
+    }, [initialData]);
+
+    // --- 3. Lógica de Busca de Dados (React Query) ---
+    
+    // Query A: Busca todas as Regiões
+    const { data: regioes = [], isLoading: isLoadingRegioes } = useQuery({
+        queryKey: ['regioes'], 
+        queryFn: fetchRegioes,
+        staleTime: 1000 * 60 * 10 
+    });
+
+    // Query B: Busca TODAS as placas (para mapear IDs selecionados)
+    const { data: allPlacasData = [], isLoading: isLoadingAllPlacas } = useQuery({
+        queryKey: ['placas', 'all'], 
+        queryFn: () => fetchPlacas(new URLSearchParams({ limit: 2000 })), 
+        staleTime: 1000 * 60 * 10,
+        select: (data) => data.data ?? [],
+    });
+
+    // Query C: Busca as placas FILTRADAS
+    const { data: filteredPlacasData = [], isLoading: isLoadingFilteredPlacas } = useQuery({
+        queryKey: ['placas', 'filtered', selectedRegiao, debouncedPlacaSearch], 
+        queryFn: () => {
+            console.log(`[Selector] Buscando API. Reg: "${selectedRegiao}", Busca: "${debouncedPlacaSearch}"`);
+            const params = new URLSearchParams({ limit: 1000 });
+            
+            if (selectedRegiao) {
+                params.append('regiao_id', selectedRegiao);
+            }
+            if (debouncedPlacaSearch) {
+                params.append('search', debouncedPlacaSearch);
+            }
+            
+            return fetchPlacas(params);
+        },
+        staleTime: 1000 * 60 * 5, 
+        select: (data) => data.data ?? [],
+    });
+
+    // Loading unificado
+    const isLoading = isLoadingRegioes || isLoadingAllPlacas || isLoadingFilteredPlacas;
+
+    // --- 4. Lógica de 'useMemo' ---
+
+    // Lista de placas DISPONÍVEIS
+    const availablePlacas = useMemo(() => {
+        const selectedIds = new Set(watchedPlacas || []);
+        return filteredPlacasData.filter(placa => !selectedIds.has(placa._id));
+    }, [filteredPlacasData, watchedPlacas]);
+
+    // Lista de placas SELECIONADAS (objetos completos)
+    const selectedPlacasObjects = useMemo(() => {
+        const allPlacasMap = new Map(allPlacasData.map(p => [p._id, p]));
+        return (watchedPlacas || [])
+            .map(id => allPlacasMap.get(id))
+            .filter(Boolean);
+    }, [watchedPlacas, allPlacasData]);
+
+    // Map de Regiões para nomes
+    const regioesMap = useMemo(() => {
+        return new Map(regioes.map(r => [r._id, r.nome]));
+    }, [regioes]);
+
+    const getRegiaoNome = (placa) => {
+        if (!placa || !placa.regiao) return 'Sem região';
+        const regiaoId = (typeof placa.regiao === 'object' && placa.regiao !== null) 
+            ? placa.regiao._id 
+            : placa.regiao;
+        return regioesMap.get(regiaoId) || 'Sem região';
+    };
+
+    // --- 5. Handlers de Seleção ---
     const handleSelectPlaca = (placaId) => { 
         setWatchedPlacas([...(watchedPlacas || []), placaId]);
     };
@@ -45,18 +121,20 @@ function PIModalFormPlacaSelector({
         setWatchedPlacas((watchedPlacas || []).filter(id => id !== placaId));
     };
 
+    // --- 6. Renderização ---
     return (
         <>
             {/* 1. Placas Selecionadas */}
             <div className="modal-form__input-group modal-form__input-group--full">
-                <label>Placas Selecionadas ({selectedPlacasObjects.length})</label>
+                {/* [CORREÇÃO CRÍTICA] Adicionada checagem defensiva para evitar TypeError */}
+                <label>Placas Selecionadas ({(selectedPlacasObjects || []).length})</label>
                 <div className="modal-form__selected-list">
                     {isLoading ? (
                         <span className="modal-form__selected-empty">A carregar...</span>
-                    ) : selectedPlacasObjects.length === 0 ? (
+                    ) : (selectedPlacasObjects || []).length === 0 ? ( // Checagem defensiva
                         <span className="modal-form__selected-empty">Nenhuma placa selecionada.</span>
                     ) : (
-                        selectedPlacasObjects.map(placa => (
+                        (selectedPlacasObjects || []).map(placa => ( // Checagem defensiva
                             <div key={placa._id} className="modal-form__selected-item">
                                 <span>{placa.numero_placa || `ID ${placa._id}`} - {getRegiaoNome(placa)}</span>
                                 <button type="button" className="modal-form__selected-remove-btn" 
@@ -74,7 +152,7 @@ function PIModalFormPlacaSelector({
             <div className="modal-form__input-group modal-form__input-group--full modal-form__multi-select-wrapper">
                 <label>Placas Disponíveis</label>
                 
-                {/* Filtro de Região (agora usa props) */}
+                {/* Filtro de Região (controla o estado interno) */}
                 <select id="regiao-filtro" className="modal-form__input"
                     value={selectedRegiao} 
                     onChange={(e) => setSelectedRegiao(e.target.value)} 
@@ -83,7 +161,7 @@ function PIModalFormPlacaSelector({
                     {regioes.map(r => <option key={r._id} value={r._id}>{r.nome}</option>)}
                 </select>
 
-                {/* Filtro de Busca (agora usa props) */}
+                {/* Filtro de Busca (controla o estado interno) */}
                 <input type="text" className="modal-form__input"
                     placeholder="Pesquisar por número da placa..."
                     value={placaSearch}
@@ -91,7 +169,7 @@ function PIModalFormPlacaSelector({
                     disabled={isSubmitting || isLoading}
                 />
                 
-                {/* Lista de Placas Disponíveis (usa props) */}
+                {/* Lista de Placas Disponíveis */}
                 <div id="placas-list" className="modal-form__multi-select-list" tabIndex={0}>
                     {isLoading ? (
                         <div className="modal-form__multi-select-option">A carregar placas...</div>
@@ -126,21 +204,11 @@ function PIModalFormPlacaSelector({
     );
 }
 
-// PropTypes (atualizado para incluir as novas props)
 PIModalFormPlacaSelector.propTypes = {
     control: PropTypes.object.isRequired,
     name: PropTypes.string.isRequired,
     isSubmitting: PropTypes.bool.isRequired,
-    // Props vindas do hook (passadas pelo pai)
-    isLoading: PropTypes.bool.isRequired,
-    regioes: PropTypes.array.isRequired,
-    availablePlacas: PropTypes.array.isRequired,
-    selectedPlacasObjects: PropTypes.array.isRequired,
-    getRegiaoNome: PropTypes.func.isRequired,
-    selectedRegiao: PropTypes.string.isRequired,
-    setSelectedRegiao: PropTypes.func.isRequired,
-    placaSearch: PropTypes.string.isRequired,
-    setPlacaSearch: PropTypes.func.isRequired,
+    initialData: PropTypes.object,
 };
 
 export default PIModalFormPlacaSelector;

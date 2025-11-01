@@ -333,3 +333,63 @@
     background-color: rgba(244, 67, 54, 0.1); /* Fundo vermelho suave */
 }
 /* --- Fim dos novos estilos --- */
+
+.pi-form__steps-indicator {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--input-border);
+    font-size: 1.4rem;
+}
+
+.pi-form__steps-indicator span {
+    color: var(--text-color-light);
+    padding: 0.5rem 1rem;
+    border-bottom: 2px solid transparent;
+}
+
+.pi-form__steps-indicator span.active {
+    color: var(--accent-green);
+    font-weight: 600;
+    border-bottom-color: var(--accent-green);
+}
+
+/* Estilos para o Resumo na Etapa 3 */
+.pi-form__summary {
+    background-color: var(--bg-color);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--input-border);
+}
+
+.pi-form__summary h4 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: var(--text-color);
+    border-bottom: 1px solid var(--input-border);
+    padding-bottom: 1rem;
+}
+
+.pi-form__summary p {
+    margin: 0 0 1rem 0;
+    font-size: 1.4rem;
+    line-height: 1.6;
+}
+
+.pi-form__summary p strong {
+    color: var(--text-color-light);
+    margin-right: 0.5rem;
+}
+
+.pi-form__summary-warning {
+    margin-top: 1.5rem !important;
+    padding-top: 1.5rem;
+    border-top: 1px dashed var(--input-border);
+    color: var(--accent-yellow);
+    font-size: 1.3rem !important;
+}
+
+.pi-form__summary-warning i {
+    margin-right: 0.8rem;
+}

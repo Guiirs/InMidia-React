@@ -9,7 +9,7 @@ import Spinner from '../../components/Spinner/Spinner';
 import Modal from '../../components/Modal/Modal';
 import './Clientes.css';
 
-const clientesQueryKey = 'clientes'; // Simplificado para o exemplo
+const clientesQueryKey = 'clientes'; // Chave de query
 
 function ClientesPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -62,18 +62,19 @@ function ClientesPage() {
 
 
     // --- [CORREÇÃO APLICADA AQUI] ---
-    // A query agora passa parâmetros (page, limit) e usa 'select' para extrair o array
-    const { data: clientesData, isLoading, isError, error } = useQuery({
+    const { data: clientes, isLoading, isError, error } = useQuery({
         queryKey: [clientesQueryKey, currentPage], // Depende da página
         queryFn: () => fetchClientes(new URLSearchParams({ page: currentPage, limit: 10 })), // Passa params
-        select: (data) => data.data ?? [], // Extrai o array 'data' de dentro do objeto
-        placeholderData: { data: [] }      // Define um placeholder válido
+        
+        // --- ESTA É A CORREÇÃO PRINCIPAL ---
+        // Verifica se a API retornou um array (ex: /clientes)
+        // ou um objeto de paginação (ex: /clientes?page=1)
+        select: (data) => Array.isArray(data) ? data : (data.data ?? []),
+        
+        // O placeholder deve ser um array, para corresponder ao que 'select' retorna.
+        placeholderData: [] 
     });
-
-    const clientes = clientesData || []; // 'clientes' é garantido como um array
-    // TODO: Extrair 'pagination'
-    // const pagination = useQuery(...).data?.pagination ?? { currentPage: 1, totalPages: 1 };
-    // --- [FIM DA CORREÇÃO] ---
+    // 'clientes' agora é diretamente o array de clientes.
 
     const handleApiError = (error, context) => {
         const apiErrors = error.response?.data?.errors;
