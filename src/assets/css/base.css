@@ -19,6 +19,8 @@
     --accent-gray: #6c757d;
     --sidebar-active-bg: #393C49;
 
+    
+
     /* -- LARGURA DA SIDEBAR AJUSTADA PARA REM -- */
     --sidebar-width-expanded: 26rem; /* Ajustado para rem (era 182px) */
     --sidebar-width-collapsed: 10rem;  /* Ajustado para rem (era 70px) */
