@@ -5,15 +5,12 @@ import { useForm } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { fetchClientes } from '../../services/api';
 
-// 1. Removemos a importação do hook 'usePlacaFilters'
-// import { usePlacaFilters } from '../../hooks/usePlacaFilters'; 
-
-// 2. Importamos as Etapas da subpasta 'steps'
+// Importa os novos componentes de Etapa
 import PIFormStep1_Cliente from './steps/PIFormStep1_Cliente';
 import PIModalFormPlacaSelector from './steps/PIModalFormPlacaSelector';
 import PIFormStep3_Valores from './steps/PIFormStep3_Valores';
 
-// Importa o CSS das etapas
+// Importa o novo CSS para as etapas
 import './steps/PIFormSteps.css';
 
 // Helper para formatar data
@@ -29,10 +26,13 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
 
     // --- 2. Lógica de Clientes (para Etapa 1) ---
     const { data: clientes = [], isLoading: isLoadingClientes } = useQuery({
-        // 3. CORREÇÃO DO BUG DE CACHE:
-        // A chave agora é ['clientes'], que corresponde à invalidação
-        // feita na ClientesPage.jsx
+        // --- CORREÇÃO DO BUG DE CACHE AQUI ---
+        // A chave agora é ['clientes'].
+        // Quando a ClientesPage invalidar ['clientes'], esta query será
+        // automaticamente atualizada.
         queryKey: ['clientes'], 
+        // --- FIM DA CORREÇÃO ---
+        
         queryFn: () => fetchClientes(new URLSearchParams({ limit: 1000 })), // Busca todos
         select: (data) => data.data ?? [],
         staleTime: 1000 * 60 * 10 // 10 min cache
@@ -67,12 +67,10 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
 
     // Observa campos necessários para outras etapas/lógica
     const dataInicio = watch('dataInicio');
-    const dataFim = watch('dataFim'); // Adicionado para passar para a Etapa 2
+    const dataFim = watch('dataFim'); 
     const watchedClienteId = watch('clienteId');
 
-    // 4. Lógica de Placas (Etapa 2)
-    // Removida. A Etapa 2 agora cuida do seu próprio loading.
-    const isLoadingPlacasEAfins = false; 
+    const isLoadingPlacasEAfins = false; // Etapa 2 cuida do seu próprio loading
     
     // --- 5. Handlers e Efeitos ---
     
@@ -95,30 +93,25 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
 
     }, [initialData, reset]);
 
-    // Submissão final (Etapa 3)
     const handleFormSubmit = (data) => {
-        // Remove campos 'dummy' antes de enviar
         const { responsavel, segmento, ...piData } = data;
         onSubmit(piData, setModalError); 
     };
     
-    // Loading agregado
-    const isLoading = isSubmitting || isLoadingClientes || isLoadingPlacasEAfins;
+    const isLoading = isSubmitting || isLoadingClientes; // Removido isLoadingPlacasEAfins
 
     // --- 6. Navegação de Etapas ---
     const nextStep = async () => {
         let fieldsToValidate;
         if (currentStep === 1) {
-            // Valida os campos da primeira etapa
             fieldsToValidate = ['clienteId', 'descricao'];
         } else if (currentStep === 2) {
-            // Valida os campos da segunda etapa
             fieldsToValidate = ['placas']; 
         }
         
         if (fieldsToValidate) {
             const isValid = await trigger(fieldsToValidate);
-            if (!isValid) return; // Para se a etapa atual for inválida
+            if (!isValid) return; 
         }
         
         if (currentStep < 3) {
@@ -136,7 +129,7 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
     return (
         <form id="pi-form" className="modal-form" onSubmit={handleSubmit(handleFormSubmit)} noValidate>
             
-            {/* --- CORREÇÃO: INDICADOR DE ETAPAS (AGORA VISÍVEL) --- */}
+            {/* Indicador de Etapas */}
             <div className="pi-form-steps">
                 <div className={`pi-form-step ${currentStep === 1 ? 'active' : (currentStep > 1 ? 'completed' : '')}`}>
                     <div className="pi-form-step__bubble">1</div>
@@ -170,9 +163,8 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
                 {currentStep === 2 && (
                     <PIModalFormPlacaSelector
                         control={control}
-                        name="placas" // Nome do campo no RHF
+                        name="placas"
                         isSubmitting={isSubmitting}
-                        // Passa as datas para a Etapa 2 poder buscar placas
                         dataInicio={dataInicio}
                         dataFim={dataFim}
                     />
@@ -191,7 +183,7 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
 
             </div>
 
-            {/* --- CORREÇÃO: AÇÕES DO FORMULÁRIO (AGORA VISÍVEIS) --- */}
+            {/* Ações do Formulário (Navegação) */}
             <div className="modal-form__actions">
                 <button 
                     type="button" 
@@ -201,7 +193,6 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
                     Cancelar
                 </button>
                 
-                {/* Botão VOLTAR (só aparece da Etapa 2 em diante) */}
                 {currentStep > 1 && (
                     <button 
                         type="button" 
@@ -212,7 +203,6 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
                     </button>
                 )}
 
-                {/* Botão PRÓXIMO (só aparece nas Etapas 1 e 2) */}
                 {currentStep < 3 && (
                     <button 
                         type="button" 
@@ -223,7 +213,6 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
                     </button>
                 )}
 
-                {/* Botão GUARDAR (só aparece na Etapa 3) */}
                 {currentStep === 3 && (
                     <button 
                         type="submit" 
