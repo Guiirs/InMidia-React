@@ -4,6 +4,8 @@ import PropTypes from 'prop-types';
 import { useForm } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { fetchClientes } from '../../services/api';
+// *** CORREÇÃO: Importar o hook useDebounce ***
+import { useDebounce } from '../../hooks/useDebounce'; 
 
 // Importa os novos componentes de Etapa
 import PIFormStep1_Cliente from './steps/PIFormStep1_Cliente';
@@ -24,15 +26,19 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
     // --- 1. Estado de Navegação ---
     const [currentStep, setCurrentStep] = useState(1);
 
+    // *** INÍCIO DA CORREÇÃO (BUGS DO FILTRO) ***
+    // 1. Movemos o estado dos filtros da Etapa 2 (PlacaSelector) para aqui (Pai).
+    // Isto evita que o estado se perca quando o React re-renderiza o formulário.
+    const [selectedRegiao, setSelectedRegiao] = useState('');
+    const [placaSearch, setPlacaSearch] = useState('');
+    // 2. O Debounce do termo de busca também sobe para o pai.
+    const debouncedPlacaSearch = useDebounce(placaSearch, 300);
+    // *** FIM DA CORREÇÃO ***
+
+
     // --- 2. Lógica de Clientes (para Etapa 1) ---
     const { data: clientes = [], isLoading: isLoadingClientes } = useQuery({
-        // --- CORREÇÃO DO BUG DE CACHE AQUI ---
-        // A chave agora é ['clientes'].
-        // Quando a ClientesPage invalidar ['clientes'], esta query será
-        // automaticamente atualizada.
         queryKey: ['clientes'], 
-        // --- FIM DA CORREÇÃO ---
-        
         queryFn: () => fetchClientes(new URLSearchParams({ limit: 1000 })), // Busca todos
         select: (data) => data.data ?? [],
         staleTime: 1000 * 60 * 10 // 10 min cache
@@ -90,6 +96,10 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
         });
         
         setCurrentStep(1); // Reseta para a etapa 1 ao abrir
+        
+        // *** CORREÇÃO AQUI: Reseta os filtros do estado local quando o modal abre ***
+        setSelectedRegiao('');
+        setPlacaSearch('');
 
     }, [initialData, reset]);
 
@@ -167,6 +177,13 @@ function PIModalForm({ onSubmit, onClose, isSubmitting, initialData = {} }) {
                         isSubmitting={isSubmitting}
                         dataInicio={dataInicio}
                         dataFim={dataFim}
+                        
+                        // *** CORREÇÃO AQUI: Passa o estado do filtro e os setters para o filho ***
+                        selectedRegiao={selectedRegiao}
+                        setSelectedRegiao={setSelectedRegiao}
+                        placaSearch={placaSearch}
+                        setPlacaSearch={setPlacaSearch}
+                        debouncedPlacaSearch={debouncedPlacaSearch} // Passa o valor "atrasado"
                     />
                 )}
 

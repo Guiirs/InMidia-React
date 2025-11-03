@@ -1,0 +1,116 @@
+/* src/pages/Docs/DocsPage.css */
+
+.docs-page-container {
+    background-color: var(--bg-secondary-color);
+    border: 1px solid var(--input-border);
+    border-radius: var(--border-radius);
+    padding: 3rem;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* Estilos para o corpo do Markdown renderizado */
+.markdown-body {
+    font-family: 'Poppins', sans-serif;
+    color: var(--text-color);
+    line-height: 1.7;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+    color: var(--text-color);
+    font-weight: 600;
+    border-bottom: 1px solid var(--input-border);
+    padding-bottom: 0.5rem;
+    margin-top: 2.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.markdown-body h1 { font-size: 2.8rem; }
+.markdown-body h2 { font-size: 2.4rem; }
+.markdown-body h3 { font-size: 2.0rem; }
+.markdown-body h4 { font-size: 1.8rem; border-bottom: none; }
+
+.markdown-body p {
+    font-size: 1.5rem;
+    color: var(--text-color-light);
+    margin-bottom: 1.6rem;
+}
+
+.markdown-body code {
+    background-color: var(--bg-color);
+    border: 1px solid var(--input-border);
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.5rem;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1.4rem;
+}
+
+.markdown-body pre {
+    background-color: var(--bg-color);
+    border: 1px solid var(--input-border);
+    padding: 1.5rem;
+    border-radius: 0.8rem;
+    overflow-x: auto;
+}
+
+.markdown-body pre code {
+    border: none;
+    background-color: transparent;
+    padding: 0;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+    padding-left: 3rem;
+    margin-bottom: 1.6rem;
+    font-size: 1.5rem;
+    color: var(--text-color-light);
+}
+
+.markdown-body li {
+    margin-bottom: 0.8rem;
+}
+
+.markdown-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2rem;
+    border: 1px solid var(--input-border);
+}
+
+.markdown-body th,
+.markdown-body td {
+    border: 1px solid var(--input-border);
+    padding: 1rem 1.2rem;
+    font-size: 1.4rem;
+    text-align: left;
+}
+
+.markdown-body th {
+    background-color: var(--bg-color);
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.markdown-body tr:nth-child(even) {
+    background-color: rgba(0, 0, 0, 0.05); /* Ligeiro escurecimento para linhas de tabela */
+}
+
+/* Específico para o tema claro */
+body.light-theme .markdown-body code {
+     background-color: #f3f4f6; /* cinza claro */
+     border-color: #e5e7eb;
+}
+body.light-theme .markdown-body pre {
+    background-color: #f3f4f6;
+    border-color: #e5e7eb;
+}
+body.light-theme .markdown-body th {
+    background-color: #f3f4f6;
+}
+body.light-theme .markdown-body tr:nth-child(even) {
+    background-color: #f9fafb;
+}

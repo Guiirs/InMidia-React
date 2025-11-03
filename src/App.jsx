@@ -8,6 +8,15 @@ import AdminRoute from './components/AdminRoute/AdminRoute.jsx';
 import ToastNotification from './components/ToastNotification/ToastNotification';
 import Spinner from './components/Spinner/Spinner';
 
+// --- ALTERAÇÃO AQUI ---
+// Importe os layouts e rotas públicas estaticamente
+import MainLayout from './layouts/MainLayout/MainLayout';
+import ApiStatusPage from './pages/ApiStatus/ApiStatusPage';
+import LoginPage from './pages/Login/LoginPage';
+import RegisterPage from './pages/Register/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPassword/ForgotPasswordPage';
+// --- FIM DA ALTERAÇÃO ---
+
 // Componente de Fallback
 const FullPageSpinner = () => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-color)' }}>
@@ -15,10 +24,7 @@ const FullPageSpinner = () => (
   </div>
 );
 
-// Lazy-load (Carregamento dinâmico) de todas as Páginas e o Layout
-const MainLayout = lazy(() => import('./layouts/MainLayout/MainLayout'));
-const ApiStatusPage = lazy(() => import('./pages/ApiStatus/ApiStatusPage'));
-const LoginPage = lazy(() => import('./pages/Login/LoginPage'));
+// Lazy-load (Carregamento dinâmico) APENAS das páginas internas
 const DashboardPage = lazy(() => import('./pages/Dashboard/DashboardPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFound/NotFoundPage'));
 const PlacasPage = lazy(() => import('./pages/Placas/PlacasPage'));
@@ -29,92 +35,76 @@ const RelatoriosPage = lazy(() => import('./pages/Relatorios/RelatoriosPage'));
 const UserPage = lazy(() => import('./pages/User/UserPage'));
 const PlacaFormPage = lazy(() => import('./pages/PlacaFormPage/PlacaFormPage'));
 const PlacaDetailsPage = lazy(() => import('./pages/PlacaDetailsPage/PlacaDetailsPage'));
-const RegisterPage = lazy(() => import('./pages/Register/RegisterPage'));
-const ForgotPasswordPage = lazy(() => import('./pages/ForgotPassword/ForgotPasswordPage'));
 const AdminUsersPage = lazy(() => import('./pages/Admin/AdminUsersPage'));
 const PIsPage = lazy(() => import('./pages/PIs/PIsPage'));
-
-// [MELHORIA] Importa o layout da página Empresa e as novas sub-páginas
 const EmpresaSettingsPage = lazy(() => import('./pages/Empresa/EmpresaSettingsPage'));
 const EmpresaDetalhes = lazy(() => import('./pages/Empresa/subpages/EmpresaDetalhes'));
 const EmpresaApiKey = lazy(() => import('./pages/Empresa/subpages/EmpresaApiKey'));
-
-// --- ALTERAÇÃO AQUI ---
-// 1. Importe a nova página de Contratos (que ainda vamos criar)
 const ContratosPage = lazy(() => import('./pages/Contratos/ContratosPage'));
-// ---------------------
-
+const DocsPage = lazy(() => import('./pages/Docs/DocsPage')); // Assumindo que a DocsPage existe
 
 function App() {
   return (
     <> 
-      <Suspense fallback={<FullPageSpinner />}>
-        <Routes>
-          {/* ... (Rotas públicas: /status, /login, etc.) ... */}
-          <Route path="/" element={<Navigate to="/status" replace />} /> 
-          <Route path="/status" element={<ApiStatusPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/empresa-register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      {/* Suspense agora envolve apenas as rotas que podem ser lazy-loaded */}
+      <Routes>
+        {/* --- ALTERAÇÃO AQUI: Rotas públicas agora usam componentes estáticos --- */}
+        <Route path="/" element={<Navigate to="/status" replace />} /> 
+        <Route path="/status" element={<ApiStatusPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/empresa-register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-
-          {/* === ROTAS PRIVADAS === */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<MainLayout />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/placas" element={<PlacasPage />} />
-              <Route path="/placas/novo" element={<PlacaFormPage />} />
-              <Route path="/placas/editar/:id" element={<PlacaFormPage />} /> 
-              <Route path="/placas/:id" element={<PlacaDetailsPage />} />
-              
-              {/* --- ROTA DE CLIENTES REMOVIDA DESTE NÍVEL --- */}
-              {/* <Route path="/clientes" element={<ClientesPage />} /> */}
-              
-              <Route path="/regioes" element={<RegioesPage />} />
-              <Route path="/map" element={<MapPage />} />
-              <Route path="/relatorios" element={<RelatoriosPage />} />
-              <Route path="/user" element={<UserPage />} />
-              
-              {/* --- ROTA DE EMPRESA ATUALIZADA --- */}
-              {/* Esta rota agora serve como um "layout" para as abas de Empresa */}
-              <Route path="/empresa-settings" element={<EmpresaSettingsPage />}>
-                {/* Rota Padrão: Redireciona para a aba "detalhes" */}
-                <Route index element={<Navigate to="detalhes" replace />} />
-                
-                {/* Aba 1: Detalhes */}
-                <Route path="detalhes" element={<EmpresaDetalhes />} />
-                
-                {/* Aba 2: Clientes (MOVEMOS PARA AQUI) */}
-                <Route path="clientes" element={<ClientesPage />} />
-                
-                {/* Aba 3: PIs (MOVIDA PARA AQUI) */}
-                <Route path="propostas" element={<PIsPage />} />
-                
-                {/* Aba 4: Contratos (MOVIDA PARA AQUI) */}
-                <Route path="contratos" element={<ContratosPage />} />
-
-                {/* Aba 5: Admin (API Key) */}
-                <Route element={<AdminRoute />}>
-                  <Route path="api" element={<EmpresaApiKey />} />
-                </Route>
-              </Route>
-              
-              {/* --- ROTAS DE PI E CONTRATOS REMOVIDAS DA RAIZ --- */}
-              {/* <Route path="/propostas" element={<PIsPage />} /> */}
-              {/* <Route path="/contratos" element={<ContratosPage />} /> */}
-
-              {/* Rotas de Admin */}
+        {/* === ROTAS PRIVADAS (Ainda usam Suspense) === */}
+        <Route element={<ProtectedRoute />}>
+          <Route 
+            element={
+              <Suspense fallback={<FullPageSpinner />}>
+                <MainLayout />
+              </Suspense>
+            }
+          >
+            {/* O Suspense é necessário aqui dentro para as rotas lazy */}
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/placas" element={<PlacasPage />} />
+            <Route path="/placas/novo" element={<PlacaFormPage />} />
+            <Route path="/placas/editar/:id" element={<PlacaFormPage />} /> 
+            <Route path="/placas/:id" element={<PlacaDetailsPage />} />
+            
+            <Route path="/regioes" element={<RegioesPage />} />
+            <Route path="/map" element={<MapPage />} />
+            <Route path="/relatorios" element={<RelatoriosPage />} />
+            <Route path="/user" element={<UserPage />} />
+            
+            <Route path="/empresa-settings" element={<EmpresaSettingsPage />}>
+              <Route index element={<Navigate to="detalhes" replace />} />
+              <Route path="detalhes" element={<EmpresaDetalhes />} />
+              <Route path="clientes" element={<ClientesPage />} />
+              <Route path="propostas" element={<PIsPage />} />
+              <Route path="contratos" element={<ContratosPage />} />
               <Route element={<AdminRoute />}>
-                 <Route path="/admin-users" element={<AdminUsersPage />} />
+                <Route path="api" element={<EmpresaApiKey />} />
               </Route>
-              
-            </Route> {/* Fim do MainLayout */}
-          </Route> {/* Fim do ProtectedRoute */}
+            </Route>
 
-          {/* === ROTA NOT FOUND (404) === */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </Suspense>
+            <Route element={<AdminRoute />}>
+               <Route path="/admin-users" element={<AdminUsersPage />} />
+               <Route path="/documentacao" element={<DocsPage />} />
+            </Route>
+            
+          </Route> {/* Fim do MainLayout */}
+        </Route> {/* Fim do ProtectedRoute */}
+
+        {/* === ROTA NOT FOUND (Ainda pode ser lazy) === */}
+        <Route 
+          path="*" 
+          element={
+            <Suspense fallback={<FullPageSpinner />}>
+              <NotFoundPage />
+            </Suspense>
+          } 
+        />
+      </Routes>
 
       <ToastNotification />
     </>

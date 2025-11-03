@@ -9,7 +9,8 @@ import Spinner from '../../components/Spinner/Spinner';
 import Modal from '../../components/Modal/Modal';
 import './Clientes.css';
 
-const clientesQueryKey = 'clientes'; // Simplificado para o exemplo
+// *** CORREÇÃO AQUI: A chave base deve ser um ARRAY para invalidação por prefixo funcionar. ***
+const clientesQueryKey = ['clientes']; 
 
 function ClientesPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -61,10 +62,10 @@ function ClientesPage() {
     }, [isModalOpen, editingCliente, reset]);
 
 
-    // --- [CORREÇÃO APLICADA AQUI] ---
-    // A query agora passa parâmetros (page, limit) e usa 'select' para extrair o array
+    // --- Query (com chave corrigida) ---
     const { data: clientesData, isLoading, isError, error } = useQuery({
-        queryKey: [clientesQueryKey, currentPage], // Depende da página
+        // *** CORREÇÃO AQUI: Usa spread (...) para mesclar a chave base e a página ***
+        queryKey: [...clientesQueryKey, currentPage], // Agora é ['clientes', 1]
         queryFn: () => fetchClientes(new URLSearchParams({ page: currentPage, limit: 10 })), // Passa params
         select: (data) => data.data ?? [], // Extrai o array 'data' de dentro do objeto
         placeholderData: { data: [] }      // Define um placeholder válido
@@ -73,7 +74,6 @@ function ClientesPage() {
     const clientes = clientesData || []; // 'clientes' é garantido como um array
     // TODO: Extrair 'pagination'
     // const pagination = useQuery(...).data?.pagination ?? { currentPage: 1, totalPages: 1 };
-    // --- [FIM DA CORREÇÃO] ---
 
     const handleApiError = (error, context) => {
         const apiErrors = error.response?.data?.errors;
@@ -90,7 +90,8 @@ function ClientesPage() {
         onSuccess: () => {
             showToast('Cliente criado com sucesso!', 'success');
             closeModal();
-            queryClient.invalidateQueries({ queryKey: [clientesQueryKey] });
+            // *** CORREÇÃO AQUI: Invalida a chave base ['clientes'] ***
+            queryClient.invalidateQueries({ queryKey: clientesQueryKey });
         },
         onError: handleApiError
     });
@@ -100,7 +101,8 @@ function ClientesPage() {
         onSuccess: () => {
             showToast('Cliente atualizado com sucesso!', 'success');
             closeModal();
-            queryClient.invalidateQueries({ queryKey: [clientesQueryKey] });
+            // *** CORREÇÃO AQUI: Invalida a chave base ['clientes'] ***
+            queryClient.invalidateQueries({ queryKey: clientesQueryKey });
         },
         onError: handleApiError
     });
@@ -109,7 +111,8 @@ function ClientesPage() {
         mutationFn: deleteCliente,
         onSuccess: () => {
             showToast('Cliente apagado com sucesso!', 'success');
-            queryClient.invalidateQueries({ queryKey: [clientesQueryKey] });
+            // *** CORREÇÃO AQUI: Invalida a chave base ['clientes'] ***
+            queryClient.invalidateQueries({ queryKey: clientesQueryKey });
         },
         onError: (error) => showToast(error.message || 'Erro ao apagar cliente.', 'error')
     });
