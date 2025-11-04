@@ -1,46 +1,48 @@
-// src/components/PIModalForm/steps/PIModalFormPlacaSelector.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+// src/components/PIModalForm/pages/Page2Placas.jsx
+import React, { useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { useFormContext, useController } from 'react-hook-form';
+import { useController } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
-import { fetchRegioes, fetchPlacas, fetchPlacasDisponiveis } from '../../../services/api';
-// import { useDebounce } from '../../../hooks/useDebounce'; // Removido, pois agora vem do Pai
+// fetchPlacasDisponiveis vem do api.js
+import { fetchRegioes, fetchPlacas, fetchPlacasDisponiveis } from '../../../services/api'; 
 import Spinner from '../../Spinner/Spinner';
-import './PIModalFormPlacaSelector.css';
+import '../css/PlacaSelector.css'; // O CSS que acabámos de corrigir
 
-// Componente de item individual (movido para ficheiro próprio)
-import PlacaSelectItem from './PlacaSelectItem';
+// Usamos o caminho relativo './components' dentro da pasta 'pages'
+import PlacaSelectItem from './components/PlacaSelectItem';
 
 // Chaves de Query
 const regioesQueryKey = ['regioes'];
-const allPlacasQueryKey = ['placas', 'all']; // Para obter todas as placas (necessário para lookup)
+const allPlacasQueryKey = ['placas', 'all']; 
 
-function PIModalFormPlacaSelector({
+export function Page2Placas({
     name,
     control,
     isSubmitting,
     dataInicio,
     dataFim,
-    // *** INÍCIO DA CORREÇÃO (BUGS DO FILTRO) ***
-    // 1. Recebe o estado e os setters do componente Pai (PIModalForm)
-    selectedRegiao,
-    setSelectedRegiao,
-    placaSearch,
-    setPlacaSearch,
-    debouncedPlacaSearch
-    // *** FIM DA CORREÇÃO ***
+    placaFilters 
 }) {
-    // const { control } = useFormContext(); // Já vem via props
+    // 1. Extrai o estado e os setters (vindos do hook usePIFormLogic)
+    const {
+        selectedRegiao,
+        setSelectedRegiao,
+        placaSearch,
+        setPlacaSearch,
+        debouncedPlacaSearch
+    } = placaFilters;
+
+    // 2. Controla o campo 'placas' do React Hook Form
     const {
         field,
         fieldState: { error }
-    } = useController({ name, control, rules: { /* required: 'Selecione pelo menos uma placa.' */ } });
-
-    // --- ESTADO LOCAL REMOVIDO ---
-    // O estado local foi movido para o PIModalForm.jsx (Pai)
-    // const [selectedRegiao, setSelectedRegiao] = useState('');
-    // const [placaSearch, setPlacaSearch] = useState('');
-    // const debouncedPlacaSearch = useDebounce(placaSearch, 300);
+    } = useController({ 
+        name, 
+        control, 
+        rules: { 
+            validate: value => (value && value.length > 0) || 'Selecione pelo menos uma placa.'
+        } 
+    });
 
     // --- Queries ---
 
@@ -51,31 +53,49 @@ function PIModalFormPlacaSelector({
         staleTime: 1000 * 60 * 60,
     });
 
-    // Query 2: TODAS as placas (usado como um "mapa" para encontrar dados das placas selecionadas)
+    // Query 2: TODAS as placas (usado como "mapa" para a lista da direita)
     const { data: allPlacasData, isLoading: isLoadingAllPlacas } = useQuery({
         queryKey: allPlacasQueryKey,
-        queryFn: () => fetchPlacas(new URLSearchParams({ limit: 10000 })), // Busca todas
+        queryFn: () => fetchPlacas(new URLSearchParams({ limit: 10000 })), 
         staleTime: 1000 * 60 * 10,
         select: (data) => data.data ?? [],
     });
 
-    // Query 3: Placas DISPONÍVEIS (para a lista da esquerda)
+
+    // ========================================================================
+    // === ESTA É A PARTE MAIS IMPORTANTE PARA CORRIGIR O FILTRO ===
+    // ========================================================================
+    
+    // Query 3: Placas DISPONÍVEIS (agora filtradas pelo backend)
     const {
         data: placasDisponiveis = [],
         isLoading: isLoadingDisponiveis,
-        isFetching: isFetchingDisponiveis,
+        isFetching: isFetchingDisponiveis, // Usado para o spinner
     } = useQuery({
-        // A query agora depende das datas E dos filtros (que vêm das props)
-        queryKey: ['placasDisponiveis', dataInicio, dataFim],
+        // 1. A queryKey AGORA DEPENDE dos filtros
+        queryKey: ['placasDisponiveis', dataInicio, dataFim, selectedRegiao, debouncedPlacaSearch],
+        
         queryFn: () => {
             if (!dataInicio || !dataFim) {
-                return Promise.resolve({ data: [] }); // Retorna array vazio se as datas forem inválidas
+                return Promise.resolve({ data: [] }); 
             }
             const params = new URLSearchParams({ dataInicio, dataFim });
+
+            // 2. Adiciona os filtros aos parâmetros da API
+            // Se 'selectedRegiao' não for nulo, adiciona ao 'params'
+            if (selectedRegiao) {
+                params.append('regiao', selectedRegiao);
+            }
+            // Se 'debouncedPlacaSearch' não for nulo, adiciona ao 'params'
+            if (debouncedPlacaSearch) {
+                params.append('search', debouncedPlacaSearch);
+            }
+
+            // A função fetchPlacasDisponiveis (do api.js) envia os params
             return fetchPlacasDisponiveis(params);
         },
         enabled: !!dataInicio && !!dataFim,
-        staleTime: 1000 * 60, // Cache curto, pois depende das datas
+        staleTime: 1000 * 30, // Cache de 30 segundos
         select: (data) => data.data ?? [],
     });
 
@@ -83,7 +103,7 @@ function PIModalFormPlacaSelector({
 
     // --- Mapeamento e Filtragem (useMemo) ---
 
-    // Cria um mapa ID -> Placa (para performance)
+    // Mapa ID -> Placa (para performance)
     const allPlacasMap = useMemo(() => {
         if (!allPlacasData) return new Map();
         return allPlacasData.reduce((map, placa) => {
@@ -92,34 +112,27 @@ function PIModalFormPlacaSelector({
         }, new Map());
     }, [allPlacasData]);
 
-    // Lista de placas selecionadas (IDs vêm do RHF 'field.value')
+    // Lista de placas selecionadas
     const placasSelecionadas = useMemo(() => {
-        return (field.value || []).map(id => allPlacasMap.get(id)).filter(Boolean); // Filtra IDs que não estão no mapa
+        return (field.value || []).map(id => allPlacasMap.get(id)).filter(Boolean);
     }, [field.value, allPlacasMap]);
 
 
-    // *** CORREÇÃO AQUI (Lógica de Filtro) ***
-    // Lista filtrada de placas disponíveis (para a lista da esquerda)
+    // 3. O useMemo agora está simples: O BACKEND JÁ FILTROU TUDO
     const placasDisponiveisFiltradas = useMemo(() => {
         return (placasDisponiveis || []).filter(placa => {
-            // IDs já selecionados não aparecem na lista de disponíveis
+            // Apenas remove placas JÁ SELECIONADAS
             if (field.value?.includes(placa._id)) {
                 return false;
             }
-            
-            // 1. Filtro de Região (usa 'selectedRegiao' da prop)
-            const matchRegiao = !selectedRegiao || (placa.regiao?._id === selectedRegiao);
-
-            // 2. Filtro de Busca (usa 'debouncedPlacaSearch' da prop)
-            const searchTerm = debouncedPlacaSearch.toLowerCase().trim();
-            const matchSearch = !searchTerm ||
-                placa.numero_placa.toLowerCase().includes(searchTerm) ||
-                (placa.nomeDaRua && placa.nomeDaRua.toLowerCase().includes(searchTerm));
-
-            return matchRegiao && matchSearch;
+            return true;
         });
-    }, [placasDisponiveis, field.value, selectedRegiao, debouncedPlacaSearch]);
-    // *** FIM DA CORREÇÃO ***
+    // 4. As dependências dos filtros (selectedRegiao, debouncedPlacaSearch) saíram daqui
+    }, [placasDisponiveis, field.value]); 
+
+    // ========================================================================
+    // === FIM DA CORREÇÃO DO FILTRO ===
+    // ========================================================================
 
 
     // --- Handlers (Adicionar/Remover) ---
@@ -133,27 +146,22 @@ function PIModalFormPlacaSelector({
         field.onChange(newValue);
     };
 
-    // *** CORREÇÃO AQUI (Bug do nome da Região) ***
-    // Helper para buscar o nome da região no mapa completo
+    // Helper para buscar o nome da região
     const findRegiaoNome = (placa) => {
-        if (placa.regiao && placa.regiao.nome) return placa.regiao.nome; // Se já estiver populado
-        
-        // Se não (ex: vindo do 'placasSelecionadas'), busca no mapa
+        if (placa.regiao && placa.regiao.nome) return placa.regiao.nome; 
         const placaCompleta = allPlacasMap.get(placa._id);
         return placaCompleta?.regiao?.nome || 'N/A';
     };
-    // *** FIM DA CORREÇÃO ***
 
     return (
         <div className="modal-form__input-group modal-form__input-group--full">
-            {/* Filtros */}
+            {/* Filtros (O JSX não muda) */}
             <div className="pi-selector__filters">
                 <div className="pi-selector__search">
                     <input
                         type="text"
                         placeholder="Buscar por Nº ou Rua..."
                         className="pi-selector__input"
-                        // *** CORREÇÃO AQUI: Usa o estado/setter do Pai ***
                         value={placaSearch}
                         onChange={(e) => setPlacaSearch(e.target.value)}
                         disabled={isSubmitting || isLoading}
@@ -162,7 +170,6 @@ function PIModalFormPlacaSelector({
                 <div className="pi-selector__region-filter">
                     <select
                         className="pi-selector__select"
-                        // *** CORREÇÃO AQUI: Usa o estado/setter do Pai ***
                         value={selectedRegiao}
                         onChange={(e) => setSelectedRegiao(e.target.value)}
                         disabled={isSubmitting || isLoading}
@@ -177,10 +184,10 @@ function PIModalFormPlacaSelector({
 
             {/* Listas */}
             <div className="pi-selector__list-container">
-                {/* Spinner de Loading */}
-                {(isLoading || isFetchingDisponiveis) && (
+                {/* Mostra o spinner quando a query dos filtros está a ser executada */
+                (isLoading || isFetchingDisponiveis) && (
                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.3)', zIndex: 10 }}>
-                        <Spinner message="A carregar placas..." />
+                        <Spinner message="A filtrar placas..." />
                     </div>
                 )}
 
@@ -229,24 +236,22 @@ function PIModalFormPlacaSelector({
                 </div>
             </div>
             
-            {/* Mensagem de Erro (do RHF) */}
             {error && <div className="modal-form__error-message" style={{ marginTop: '1rem' }}>{error.message}</div>}
         </div>
     );
 }
 
-PIModalFormPlacaSelector.propTypes = {
+Page2Placas.propTypes = {
     name: PropTypes.string.isRequired,
     control: PropTypes.object.isRequired,
     isSubmitting: PropTypes.bool.isRequired,
     dataInicio: PropTypes.string,
     dataFim: PropTypes.string,
-    // *** CORREÇÃO AQUI: Adiciona validação das novas props ***
-    selectedRegiao: PropTypes.string.isRequired,
-    setSelectedRegiao: PropTypes.func.isRequired,
-    placaSearch: PropTypes.string.isRequired,
-    setPlacaSearch: PropTypes.func.isRequired,
-    debouncedPlacaSearch: PropTypes.string.isRequired,
+    placaFilters: PropTypes.shape({
+        selectedRegiao: PropTypes.string.isRequired,
+        setSelectedRegiao: PropTypes.func.isRequired,
+        placaSearch: PropTypes.string.isRequired,
+        setPlacaSearch: PropTypes.func.isRequired,
+        debouncedPlacaSearch: PropTypes.string.isRequired,
+    }).isRequired,
 };
-
-export default PIModalFormPlacaSelector;

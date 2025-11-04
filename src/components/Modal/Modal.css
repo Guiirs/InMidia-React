@@ -32,12 +32,12 @@
     border: 1px solid var(--input-border);
     padding: 3rem;
     width: 100%;
-    max-width: 600px; /* Largura máxima padrão, pode ser sobrescrita */
+    max-width: 800px; /* Largura máxima padrão, pode ser sobrescrita */
     box-shadow: var(--box-shadow);
     transform: scale(0.95);
     transition: transform 0.3s ease;
     max-height: 90vh; /* Limita altura */
-    overflow-y: auto; /* Adiciona scroll se necessário */
+    overflow-y: none; /* Adiciona scroll se necessário */
 }
 
 .modal--visible .modal__content {

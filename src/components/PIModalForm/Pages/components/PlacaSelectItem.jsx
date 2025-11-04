@@ -1,15 +1,17 @@
-// src/components/PIModalForm/steps/PlacaSelectItem.jsx
+// src/components/PIModalForm/Pages/components/PlacaSelectItem.jsx
 import React from 'react';
 import PropTypes from 'prop-types';
 
 /**
  * Componente de item individual para as listas de seleção de placas.
+ * (Movido de 'steps/' para 'Pages/components/')
  */
 function PlacaSelectItem({ placa, regiaoNome, onSelect, type, disabled }) {
     const isAdd = type === 'add';
     const buttonIcon = isAdd ? 'fa-plus' : 'fa-minus';
     const buttonTitle = isAdd ? 'Adicionar placa' : 'Remover placa';
 
+    // Usa os estilos do PlacaSelector.css (importado na Page2Placas.jsx)
     return (
         <div className="placa-select-item">
             <div className="placa-select-item__info">
